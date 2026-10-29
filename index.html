@@ -1,0 +1,1884 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<!-- ▼ DATA LOGGING: paste your Google Apps Script web-app URL (ends in /exec) between the quotes. Leave it as is to play without logging. -->
+<script>window.RUSH_LOG_URL='PASTE_YOUR_WEB_APP_URL_HERE';</script>
+</head><body>
+<title>Pipeline Rush</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: The Pull template — charcoal top bar + hazard stripe, stage map of round nodes, level = 50:50 split (controls left, live 3D site right). */
+:root{
+  --y:#FFB703; --char:#264653; --dig:#E63946; --pipe:#2A9D8F; --fill:#1D6FB8;
+  --bg:#F4F1E8; --card:#FFFFFF; --ink:#1B2A31; --soft:#5A6A72; --line:#E2E0D8; --cell:#FBFAF6;
+  --good:#1B8A4B; --bad:#D63A2F; --amber:#E08A00; --gridline:#D6D2C6; --gridline5:#A9A393;
+  --shadow:0 2px 0 rgba(0,0,0,.08), 0 8px 24px rgba(20,35,45,.10);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#12181B; --card:#1B2327; --ink:#EEF1F2; --soft:#9AA7AE; --line:#2B353B; --cell:#161E22;
+  --good:#5FD38D; --bad:#FF6B5E; --amber:#FFB23E; --gridline:#34414A; --gridline5:#5C6B75; --shadow:0 2px 0 rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35); color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#12181B; --card:#1B2327; --ink:#EEF1F2; --soft:#9AA7AE; --line:#2B353B; --cell:#161E22;
+  --good:#5FD38D; --bad:#FF6B5E; --amber:#FFB23E; --gridline:#34414A; --gridline5:#5C6B75; --shadow:0 2px 0 rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35); color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{background:var(--bg)}
+body{margin:0; color:var(--ink); font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif; -webkit-font-smoothing:antialiased;
+  padding-left:max(0px,env(safe-area-inset-left,0px)); padding-right:max(0px,env(safe-area-inset-right,0px))}
+button{font:inherit; color:inherit; cursor:pointer}
+button:disabled{cursor:not-allowed; opacity:.4}
+:focus-visible{outline:3px solid var(--y); outline-offset:2px}
+.num{font-variant-numeric:tabular-nums}
+.wrap{max-width:1180px; margin:0 auto; padding:16px max(16px,env(safe-area-inset-right,0px)) 16px max(16px,env(safe-area-inset-left,0px))}
+.wrap.wide{max-width:1560px}
+
+/* top bar */
+.top{background:var(--char); color:#fff}
+.top .wrap{display:flex; align-items:center; gap:12px; padding-block:12px}
+.logo{font-weight:900; font-size:24px; letter-spacing:-.02em; background:none; border:0; color:#fff; padding:0}
+.logo span{color:var(--y)}
+.top .sp{flex:1}
+.ibtn{background:rgba(255,255,255,.12); border:0; color:#fff; border-radius:12px; padding:8px 14px; font-weight:800}
+.logo{white-space:nowrap}
+@media (max-width:480px){.logo{font-size:20px}.ibtn{padding:6px 10px}.lname{font-size:18px}}
+.hazard{height:6px; background:repeating-linear-gradient(-45deg,var(--y) 0 10px,var(--char) 10px 20px)}
+
+/* big buttons */
+.go{border:0; border-radius:16px; padding:12px 22px; font-weight:900; font-size:18px; background:var(--y); color:#1B2A31; box-shadow:0 4px 0 #C98F00; transition:transform .08s}
+.go:active{transform:translateY(3px); box-shadow:0 1px 0 #C98F00}
+.go.dark{background:var(--char); color:#fff; box-shadow:0 4px 0 #13262D}
+.go.ghost{background:var(--card); color:var(--ink); box-shadow:0 4px 0 var(--line); border:1px solid var(--line)}
+.row{display:flex; gap:10px; justify-content:center; flex-wrap:wrap; align-items:center}
+.row.l{justify-content:flex-start}
+
+/* map */
+.stage{background:var(--card); border-radius:22px; padding:16px 18px; box-shadow:var(--shadow)}
+.stage h2{margin:0 0 12px; font-size:18px; display:flex; align-items:center; gap:10px}
+.stage h2 .tag{background:var(--char); color:#fff; border-radius:10px; padding:2px 10px; font-size:14px}
+.path{display:flex; gap:14px; flex-wrap:wrap; align-items:flex-start}
+.node{display:grid; justify-items:center; gap:6px; width:118px; background:none; border:0; padding:4px}
+.node .ball{width:74px; height:74px; border-radius:50%; display:grid; place-items:center; font-weight:900; font-size:20px;
+  background:var(--y); color:#1B2A31; box-shadow:0 5px 0 #C98F00}
+.node.done .ball{background:var(--char); color:#fff; box-shadow:0 5px 0 #13262D}
+.node:disabled .ball{background:var(--line); color:var(--soft); box-shadow:none}
+.node .nm{font-weight:800; font-size:14px; text-align:center}
+.stars{color:var(--y); letter-spacing:2px; font-size:16px}
+.stars .off{color:var(--line)}
+
+/* level bar */
+.lbar{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px}
+.lname{font-weight:900; font-size:22px}
+.chip{border-radius:999px; padding:6px 12px; font-weight:800; font-size:14px; background:var(--card); border:2px solid var(--line)}
+.chip.ok{border-color:var(--good); color:var(--good)}
+.chip.no{border-color:var(--bad); color:var(--bad)}
+.chip.y{border-color:var(--y)}
+.hud{display:flex; gap:8px; flex-wrap:wrap; margin-left:auto}
+.stat{background:var(--card); border-radius:14px; padding:6px 14px; box-shadow:var(--shadow); font-weight:900; font-size:18px; display:flex; align-items:center; gap:8px}
+.stat small{font-size:11px; color:var(--soft); font-weight:800; text-transform:uppercase; letter-spacing:.04em}
+.stat.warn{color:var(--bad)} .stat.good{color:var(--good)}
+
+/* split: controls left, live site right */
+.split{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:16px; align-items:start}
+@media (max-width:1000px){.split{grid-template-columns:1fr}}
+.lcol{display:grid; gap:12px; min-width:0}
+.rcol{position:sticky; top:12px; height:calc(100vh - 24px); min-width:0}
+@media (max-width:1000px){.rcol{position:static; height:auto; order:-1}}
+.board,.dock{background:var(--card); border-radius:18px; box-shadow:var(--shadow); padding:12px; min-width:0}
+.bhd{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:8px; font-weight:900; font-size:16px}
+.bhd .sp{flex:1}
+.banner{border-radius:18px; padding:12px 16px; font-weight:900; font-size:18px; display:flex; align-items:center; gap:12px; flex-wrap:wrap}
+.banner.bad{background:color-mix(in srgb, var(--bad) 14%, var(--card)); color:var(--bad)}
+.banner.good{background:color-mix(in srgb, var(--good) 16%, var(--card)); color:var(--good)}
+.banner.amber{background:color-mix(in srgb, var(--amber) 16%, var(--card)); color:var(--amber)}
+.banner .sp{flex:1}
+.guide{background:var(--card); border-radius:18px; box-shadow:var(--shadow); padding:12px 16px; border-left:6px solid var(--char)}
+.guide.why{animation:rise .3s}
+.guide h4{margin:0 0 4px; font-size:13px; font-weight:900; text-transform:uppercase; letter-spacing:.06em; color:var(--soft)}
+.guide p{margin:0; font-size:15px; font-weight:600; line-height:1.5; max-width:70ch}
+.shake{animation:shake .35s}
+@keyframes shake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+
+/* site card */
+.sitecard{background:var(--card); border-radius:20px; box-shadow:var(--shadow); padding:12px; display:flex; flex-direction:column; gap:10px; height:100%}
+.sitehd{display:flex; align-items:center; gap:10px}
+.sitehd .ttl{border-radius:999px; padding:6px 14px; font-weight:900; font-size:14px; color:#fff; background:var(--char)}
+.sitehd .clock{margin-left:auto; font-weight:900; font-size:20px; min-width:8ch; text-align:right; font-variant-numeric:tabular-nums}
+.sitewrap{position:relative; flex:1; min-height:300px; border-radius:14px; overflow:hidden;
+  background:linear-gradient(#78B8E3, #E4F2F8 92%); contain:layout}
+@media (max-width:1000px){.sitewrap{flex:none; height:min(56vw,360px); min-height:220px}}
+.cv{position:absolute; inset:0}
+canvas.site3d{position:absolute; inset:0; width:100%; height:100%; display:block; cursor:grab; touch-action:none}
+.v3hint{position:absolute; left:10px; bottom:8px; z-index:2; font-size:12px; font-weight:800; color:#1B2A31; background:rgba(255,255,255,.7); padding:3px 8px; border-radius:8px; pointer-events:none}
+.no3d{position:absolute; inset:0; display:grid; place-items:center; font-weight:900; color:#1B2A31}
+.clashov{position:absolute; inset:0; z-index:3; display:grid; place-content:center; justify-items:center; gap:10px; text-align:center; padding:18px;
+  background:rgba(120,10,10,.55); color:#fff; animation:clashbg 1s ease-in-out infinite alternate}
+.clashov .cbig{font-size:44px; font-weight:900; letter-spacing:.04em; text-shadow:0 3px 0 rgba(0,0,0,.35); animation:clashpulse .6s ease-in-out infinite alternate}
+.clashov .cmsg{font-size:18px; font-weight:900; background:rgba(0,0,0,.35); padding:8px 14px; border-radius:12px}
+@keyframes clashbg{from{background:rgba(120,10,10,.45)} to{background:rgba(170,20,20,.62)}}
+@keyframes clashpulse{from{transform:scale(1)} to{transform:scale(1.08)}}
+.crewchips{display:flex; gap:8px; flex-wrap:nowrap; overflow:hidden; min-height:34px; align-items:center}
+@media (max-width:640px){.crewchips{flex-wrap:wrap}}
+.cchip{border-radius:999px; padding:5px 12px; font-weight:800; font-size:14px; background:var(--card); border:2px solid var(--line); white-space:nowrap; flex:0 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis}
+button.cchip{cursor:pointer}
+.cchip.work{border-color:var(--good); color:var(--good)}
+.cchip.ready{border-color:var(--y)}
+.cchip.focus{background:var(--char); color:#fff; border-color:var(--char)}
+.cchip.done{color:var(--soft)}
+.sitectl{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+.sitectl input[type=range]{flex:1; min-width:120px; accent-color:var(--char)}
+.spdsw{display:inline-flex; border-radius:10px; overflow:hidden; border:2px solid var(--line); flex:none}
+.spdsw button{border:0; background:var(--card); padding:6px 9px; font-weight:900; font-size:13px}
+.spdsw button.on{background:var(--char); color:#fff}
+.play{border:0; border-radius:12px; padding:9px 14px; font-weight:900; background:var(--y); color:#1B2A31; box-shadow:0 3px 0 #C98F00; min-width:96px}
+
+/* tray + order rows (1.1) */
+.tray{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px}
+@media (max-width:560px){.tray{grid-template-columns:1fr}}
+.tile{border:3px solid var(--tc); border-radius:18px; padding:10px; display:grid; justify-items:center; gap:2px; background:var(--cell); user-select:none; box-shadow:0 4px 0 var(--line)}
+.tile.used{opacity:.25}
+.tile .ico{font-size:36px; line-height:1.1}
+.tile b{font-size:16px}
+.tile small{font-weight:800; color:var(--soft); font-size:13px}
+.slots{display:grid; gap:8px; margin-top:12px}
+.slot{display:flex; align-items:center; gap:12px; border:3px dashed var(--line); border-radius:16px; min-height:58px; padding:6px 14px; font-weight:900}
+.slot .n{width:34px; height:34px; border-radius:50%; display:grid; place-items:center; background:var(--line); color:var(--soft)}
+.slot.filled{border-style:solid; border-color:var(--tc); background:color-mix(in srgb, var(--tc) 10%, var(--card))}
+.slot.filled .n{background:var(--tc); color:#fff}
+.slot .ico{font-size:24px}
+.dragghost{position:fixed; z-index:40; pointer-events:none; transform:translate(-50%,-50%); color:#fff; font-weight:900; padding:8px 14px; border-radius:12px; box-shadow:0 8px 20px rgba(0,0,0,.25); white-space:nowrap}
+
+/* timeline (bar chart) */
+.tl{display:grid; gap:6px; overflow-x:auto}
+.tl-row,.tl-axis{display:grid; grid-template-columns:130px minmax(240px,1fr) 44px; gap:8px; align-items:center}
+@media (max-width:560px){.tl-row,.tl-axis{grid-template-columns:100px minmax(180px,1fr) 34px; gap:6px}}
+.tl-lab{font-weight:900; font-size:14px; white-space:nowrap}
+.track{position:relative; height:36px; border-radius:10px; background-color:var(--cell); border:2px solid var(--line);
+  background-image:repeating-linear-gradient(to right,var(--gridline) 0 1px,transparent 1px calc(100% / var(--tmax)))}
+.track.hot{border-color:var(--y); border-style:dashed}
+.bar{position:absolute; top:4px; bottom:4px; border-radius:8px; color:#fff; font-weight:900; font-size:13px; display:flex; align-items:center; justify-content:center; white-space:nowrap; overflow:hidden; user-select:none}
+.bar.slide{cursor:grab; touch-action:none; box-shadow:0 0 0 3px var(--y)}
+.bar.locked{box-shadow:0 0 0 2px var(--good)}
+.bar .fp{position:absolute; inset:0 auto 0 0; background:rgba(255,255,255,.35)}
+.flag{position:absolute; top:-4px; bottom:-4px; width:3px; margin-left:-1px; background:var(--y); border-radius:2px; pointer-events:none}
+.tl-axis .ax{position:relative; height:16px}
+.tl-axis .ax span{position:absolute; transform:translateX(-50%); font-size:11px; font-weight:800; color:var(--soft)}
+.tl-st{font-weight:900; font-size:14px; color:var(--soft)}
+.tl-st.ok{color:var(--good)}
+
+/* measure card */
+.mhd{display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-weight:900; font-size:16px}
+.mhd .ico{font-size:26px}
+.mhd small{color:var(--soft); font-weight:800}
+.pb{position:relative; height:42px; border-radius:12px; background:var(--cell); border:2px solid var(--line); overflow:hidden; margin:10px 0}
+.pb i{position:absolute; inset:0 auto 0 0; transition:width .12s}
+.pb span{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-weight:900; color:var(--ink)}
+.pb.full{border:3px solid var(--y); cursor:grab}
+.pb.full span{color:#fff}
+.mrow{display:flex; align-items:center; gap:12px; flex-wrap:wrap}
+.mrow input{flex:1; min-width:160px; accent-color:var(--char)}
+.big{font-weight:900; font-size:19px}
+.big b{color:var(--y)}
+
+/* LOB chart */
+.lob{width:100%; height:auto; display:block; user-select:none; touch-action:none}
+.lob.pick{cursor:crosshair}
+.lob .plot{fill:var(--cell)}
+.lob .g1{stroke:var(--gridline); stroke-width:.6}
+.lob .g2{stroke:var(--gridline5); stroke-width:.8}
+.lob .ax{fill:var(--soft); font-size:10px; font-weight:800}
+.lob .axt{fill:var(--soft); font-size:10px; font-weight:900; letter-spacing:.05em}
+.lob .bt{fill:#fff; font-size:10px; font-weight:900}
+.lob .bl{fill:var(--soft); font-size:10px; font-weight:900}
+.lob .ring{fill:none; stroke:var(--y); stroke-width:3; animation:ring 1.2s infinite; transform-box:fill-box; transform-origin:center}
+.lob .ringlab{fill:var(--ink); font-size:11px; font-weight:900}
+.lob .hit{fill:rgba(214,58,47,.22); stroke:var(--bad); stroke-width:2.5}
+.lob .hitlab{fill:var(--bad); font-size:12px; font-weight:900}
+.lob .cur{stroke:var(--y); stroke-width:2}
+.lob .pt{stroke:var(--card); stroke-width:1.5}
+.lob .mk{fill:var(--y); stroke:var(--ink); stroke-width:1}
+.lob .mklab{fill:var(--ink); font-size:11px; font-weight:900}
+.lob .grab{cursor:ew-resize}
+@keyframes ring{0%{transform:scale(.8);opacity:1}100%{transform:scale(1.6);opacity:.2}}
+.legend{display:flex; gap:14px; flex-wrap:wrap; font-size:13px; font-weight:800; color:var(--soft)}
+.legend i{display:inline-block; width:14px; height:14px; border-radius:3px; vertical-align:-2px; margin-right:5px}
+
+/* compare bars */
+.cmp{display:grid; gap:8px}
+.crow{display:grid; grid-template-columns:110px 1fr; gap:10px; align-items:center; font-weight:900; font-size:14px}
+.strack{height:28px; border-radius:8px; background:var(--bg); overflow:hidden}
+.sbar{height:100%; border-radius:8px; display:flex; align-items:center; justify-content:flex-end; padding:0 10px; font-weight:900; font-size:14px; color:#fff; min-width:60px}
+.ctabs{display:inline-flex; flex-wrap:wrap; gap:6px}
+.ctab{display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border-radius:12px; border:2px solid var(--line); background:var(--card); color:var(--soft); font:inherit; font-weight:900; font-size:14px; cursor:pointer}
+.ctab.on{background:var(--char); color:#fff; border-color:var(--char)}
+.ctab.ok{color:var(--good)}
+.ctab:disabled{cursor:default; opacity:.85}
+.ctab:not(:disabled):hover{border-color:var(--y)}
+.ctab .undo{font-size:13px; padding:0 6px; border-radius:8px; background:rgba(255,193,7,.18); color:var(--y)}
+.info{display:inline-grid; place-items:center; width:18px; height:18px; border-radius:50%; border:1.5px solid var(--soft); background:transparent; color:var(--soft);
+  font:italic 900 11px/1 Georgia,"Times New Roman",serif; cursor:pointer; padding:0; margin:0 0 0 5px; vertical-align:middle; flex:none; text-transform:none; letter-spacing:0}
+.info:hover,.info:focus-visible,.info[aria-expanded="true"]{background:var(--y); border-color:var(--y); color:var(--char); outline:none}
+.info.static{cursor:default; margin:0 2px}
+.infopop{position:fixed; z-index:400; background:var(--card); color:var(--ink); border:2px solid var(--char); border-radius:14px; box-shadow:0 12px 32px rgba(0,0,0,.28);
+  padding:12px 14px; font-size:14px; line-height:1.45; font-weight:500; text-align:left; animation:popin .12s ease-out}
+.infopop b{display:block; font-size:15px; font-weight:900; margin-bottom:2px}
+.infopop p{margin:6px 0 0}
+.infopop .why span{display:block; font-size:11px; font-weight:900; letter-spacing:.06em; text-transform:uppercase; color:var(--soft)}
+.infopop .ex{color:var(--soft); font-size:13px}
+@keyframes popin{from{opacity:0; transform:translateY(-3px)} to{opacity:1; transform:none}}
+@media (prefers-reduced-motion:reduce){.infopop{animation:none}}
+.lob .evband{fill:rgba(255,183,3,.16); stroke:var(--y); stroke-width:1}
+.lob .evlab{font-size:9px; font-weight:900; fill:var(--ink)}
+.lob .waitseg{fill:none; stroke:var(--bad); stroke-width:5; opacity:.75; stroke-linecap:round; stroke-linejoin:round}
+.clashov.evt{background:rgba(38,70,83,.72)}
+.clashov.evt .cbig{font-size:34px; color:var(--y); animation:none}
+.r2opt{font:inherit; color:inherit; text-align:left; cursor:pointer}
+.r2opt:focus-visible{outline:3px solid var(--y); outline-offset:2px}
+.eqslot .opts .r2opt{flex:1 1 calc(50% - 8px); min-width:150px; padding:6px 10px}
+.r2key{display:inline-flex; gap:5px; align-items:center; font-size:11px; font-weight:800; color:var(--soft)}
+.r2key i{display:inline-block; width:16px; height:0; border-top:2.5px solid var(--soft); margin-left:6px}
+.r2key i.k1{border-top-style:dashed; opacity:.7} .r2key i.k3{opacity:.35} .r2key i.k4{border-top:4px solid var(--bad); opacity:.75}
+.r2stars{color:var(--y); letter-spacing:1px; margin-left:6px} .r2stars .off{opacity:.3}
+.tbl td.bad{color:var(--bad); font-weight:800} .tbl td.good{color:var(--good); font-weight:800}
+.debrief{margin-top:8px; background:var(--cell); border-radius:14px; padding:10px 14px; border-left:5px solid var(--char)}
+.debrief h4{margin:0 0 6px; font-size:15px}
+.debrief ul{margin:0; padding:0; list-style:none; display:grid; gap:4px}
+.debrief li{display:flex; gap:8px; font-size:13.5px; font-weight:600; line-height:1.4}
+.debrief li span{flex:none; width:20px; text-align:center}
+.debrief li.bad{color:var(--bad)} .debrief li.strong{font-weight:900; font-size:14.5px; margin-top:4px}
+.borrow{margin-top:8px; padding:8px 10px; border-radius:14px; background:var(--cell); border:2px dashed var(--line)}
+.borrow .opts .opt{min-width:150px}
+.brates{display:flex; flex-wrap:wrap; gap:6px 16px; margin-top:8px; font-size:13.5px; font-weight:700}
+.brates b{font-weight:900} .brates b.down{color:var(--bad)} .brates small{color:var(--soft); font-weight:700}
+.fixbox{margin-top:8px; padding:8px 10px; border-radius:14px; background:var(--cell); border:2px dashed var(--line); display:grid; gap:6px}
+.fixrow{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+.fixrow .step output{min-width:58px; text-align:center}
+.ctabs2{display:flex; align-items:center; gap:6px; flex-wrap:wrap}
+.tbl.fsched tr.crewhd td{font-weight:900; padding-top:8px}
+.tbl tr.seg td:first-child{padding-left:16px}
+.tbl tr.seg.red td{color:var(--bad); background:color-mix(in srgb, var(--bad) 7%, transparent)}
+.tbl tr.segtot td{font-weight:800; border-top:1px solid var(--line)}
+.r2opt.off{opacity:.55; cursor:not-allowed}
+.pills{display:inline-flex; border-radius:12px; overflow:hidden; border:2px solid var(--line)}
+.pills span{padding:6px 12px; font-weight:900; font-size:14px; background:var(--card)}
+.pills span.on{background:var(--char); color:#fff}
+.pills span.ok{color:var(--good)}
+
+/* overlays */
+.ov{position:fixed; inset:0; background:rgba(15,25,30,.55); display:grid; place-items:center; z-index:20; padding:16px}
+.pidin{width:100%; font:inherit; font-size:20px; font-weight:800; padding:10px 12px; border:2px solid var(--line,#ccc); border-radius:12px; margin:6px 0 10px; text-align:center; letter-spacing:.04em}
+.ibtn.pid{width:auto; padding:0 10px; font-size:13px; font-weight:800}
+.panel{background:var(--card); border-radius:24px; padding:22px; width:min(560px,100%); max-height:94vh; overflow:auto; box-shadow:0 20px 60px rgba(0,0,0,.35); display:grid; gap:14px; text-align:center; animation:rise .3s}
+.panel h3{margin:0; font-size:28px; font-weight:900}
+.panel .lv{font-weight:900; color:var(--soft); font-size:14px; letter-spacing:.08em}
+.steps3{display:grid; grid-template-columns:repeat(3,1fr); gap:10px}
+.steps3 div{background:var(--bg); border-radius:16px; padding:12px 8px; font-weight:800; font-size:14px}
+.steps3 .ico{font-size:30px; display:block}
+.bigstars{font-size:46px; letter-spacing:6px; color:var(--y)}
+.bigstars .off{color:var(--line)}
+.tip{font-weight:700; color:var(--soft)}
+.conf{position:fixed; top:-12px; width:10px; height:14px; z-index:30; pointer-events:none; animation:fall 1.8s linear forwards}
+@keyframes fall{to{transform:translateY(105vh) rotate(540deg)}}
+@keyframes rise{from{transform:translateY(14px);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+.guide.mission{border-left-color:var(--y); background:color-mix(in srgb, var(--y) 12%, var(--card))}
+.guide.mission p{font-size:16px; font-weight:700}
+.guide.learn{border-left-color:var(--char)}
+.guide.why{border-left-color:var(--good); background:color-mix(in srgb, var(--good) 8%, var(--card))}
+.guide.define{border-left-color:var(--fill)}
+.guide p+p{margin-top:6px}
+.units{display:flex; gap:8px 16px; flex-wrap:wrap; font-size:13px; font-weight:700; color:var(--soft); margin-top:10px}
+.units b{color:var(--ink)}
+.quest{border:3px solid var(--y); border-radius:18px; padding:12px 16px; background:color-mix(in srgb, var(--y) 16%, var(--card)); box-shadow:var(--shadow); display:grid; gap:8px}
+.qhd{font-weight:900; font-size:20px; display:flex; align-items:center; gap:10px}
+.qn{background:var(--char); color:#fff; border-radius:999px; padding:2px 10px; font-size:15px}
+.quest p{margin:0; font-weight:700}
+.qchip{border-radius:999px; padding:6px 12px; font-weight:900; font-size:14px; background:var(--card); border:2px solid var(--line)}
+.qchip.now{border-color:var(--y); box-shadow:0 0 0 3px color-mix(in srgb, var(--y) 45%, transparent)}
+.qchip.ok{border-color:var(--good); color:var(--good)}
+.tl{row-gap:16px; padding-top:10px}
+.flag span{position:absolute; top:-18px; left:50%; transform:translateX(-50%); background:var(--y); color:#1B2A31; font-size:11px; font-weight:900; padding:1px 6px; border-radius:6px; white-space:nowrap}
+.dropme{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:13px; color:var(--soft)}
+.slot .hintx{color:var(--soft); font-weight:700; font-size:14px}
+.minitable{display:flex; gap:6px 14px; flex-wrap:wrap; font-weight:800; font-size:13px; margin-bottom:6px}
+.gapnote{display:flex; gap:6px 16px; flex-wrap:wrap; font-size:12px; font-weight:700; color:var(--soft); margin-top:8px}
+.gapnote b{color:var(--ink)}
+.board .hud{margin:8px 0 0}
+.dock .hud{margin:10px 0 0}
+.lob .ghostlab{font-size:10px; font-weight:900}
+.lob .slab{font-size:10.5px; font-weight:900}
+.lob .grabhint{font-size:14px; font-weight:900}
+.chip small{font-size:11px; color:var(--soft); font-weight:800; text-transform:uppercase; letter-spacing:.03em}
+.tile small{display:block}
+/* equipment picker (from The Pull dock) */
+.crews{display:grid; gap:10px}
+.crew{display:grid; grid-template-columns:130px 1fr 110px; gap:10px; align-items:center}
+@media (max-width:1300px){.crew{grid-template-columns:1fr}.crew .rate{text-align:left}}
+.cname{font-weight:900; font-size:16px; display:flex; align-items:center; gap:8px}
+.cname i{width:14px; height:14px; border-radius:4px; display:inline-block}
+.opts{display:flex; gap:8px; flex-wrap:wrap}
+.opt{display:flex; align-items:center; gap:8px; border:2px solid var(--line); border-radius:14px; padding:6px 6px 6px 10px; background:var(--cell)}
+.opt.on{border-color:var(--tc); background:color-mix(in srgb, var(--tc) 10%, var(--card))}
+.opt b{font-size:14px} .opt small{display:block; font-size:12px; color:var(--soft); font-weight:700}
+.step{display:flex; align-items:center; gap:2px}
+.step button{width:30px; height:30px; border-radius:9px; border:0; background:var(--line); font-weight:900; font-size:16px}
+.step output{width:22px; text-align:center; font-weight:900}
+.rate{font-weight:900; font-size:15px; text-align:right}
+.rate small{display:block; font-size:12px; color:var(--soft)}
+
+/* ===== fit the level to one screen ===== */
+body.fit{height:100vh; overflow:hidden; display:flex; flex-direction:column}
+body.fit #root{flex:1; min-height:0; display:flex; flex-direction:column}
+body.fit .level{flex:1; min-height:0; display:flex; flex-direction:column; width:100%; max-width:none; padding-block:10px}
+body.fit .level .lbar{flex:none; margin-bottom:8px}
+body.fit .level .split{flex:1; min-height:0; display:flex; gap:16px; align-items:stretch}
+body.fit .level .split>*{min-height:0; flex:1 1 0; min-width:0}
+.guide.compact p{display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden}
+body.fit .level .lcol{height:100%; overflow:auto; scrollbar-gutter:stable}
+body.fit .level .rcol{position:static; height:100%}
+@media (max-width:1000px){body.fit #root{display:block}body.fit .level .split{display:grid}body.fit{height:auto; overflow:auto; display:block} body.fit .level .lcol{height:auto; overflow:visible} body.fit .level .rcol{height:auto}}
+.lcol{display:flex; flex-direction:column; gap:10px}
+.lcol>*{flex:none}
+.board.grow{flex:1 1 0; min-height:200px; display:flex; flex-direction:column}
+.board.grow svg.lob{flex:1; min-height:0; height:100%}
+.guide{padding:9px 14px}
+.guide.mission p{font-size:14px; font-weight:600}
+.guide p.lrn{font-size:13px; font-weight:600; color:var(--soft); margin-top:3px}
+.guide p b{color:var(--ink)}
+.guide.define p{font-size:13px; font-weight:600}
+.quest{display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:9px 12px}
+.qhd{font-size:17px}
+.qtxt{font-weight:800; font-size:14px}
+.qchip{padding:4px 10px; font-size:13px}
+.unitnote{font-size:12px; font-weight:700; color:var(--soft); margin-top:6px}
+.mhd .unitnote{margin:0; flex-basis:100%}
+.tbl{border-collapse:collapse; width:100%; font-size:13px}
+.tbl th{font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.04em; color:var(--soft); text-align:left; padding:4px 6px; border-bottom:2px solid var(--line)}
+.tbl td{padding:4px 6px; border-bottom:1px solid var(--line); font-variant-numeric:tabular-nums; font-weight:700}
+.tbl .r{text-align:right}
+.tbl tr.tot td{border-top:2px solid var(--line)}
+.tbl tr.grand td{font-weight:900; font-size:15px; color:var(--ink); background:color-mix(in srgb, var(--y) 18%, var(--card))}
+.tbl-wrap{overflow-x:auto}
+.pb{height:36px; margin:8px 0}
+.dock{padding:10px 12px}
+.board{padding:10px 12px}
+.slots{gap:6px; margin-top:8px}
+.slot{min-height:46px}
+.tile{padding:8px}
+.tile .ico{font-size:30px}
+/* player bar inside the 3D view */
+.player{position:absolute; left:10px; right:10px; bottom:10px; z-index:4; display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  background:rgba(27,42,49,.82); color:#fff; border-radius:14px; padding:6px 10px}
+.player input{flex:1; min-width:100px; accent-color:var(--y)}
+.pbtn{border:0; border-radius:10px; width:42px; height:36px; font-size:18px; font-weight:900; background:var(--y); color:#1B2A31; box-shadow:0 3px 0 #C98F00}
+.pday{font-weight:900; min-width:7ch}
+.spdsw.dark{border-color:rgba(255,255,255,.25)}
+.spdsw.dark button{background:transparent; color:#fff}
+.spdsw.dark button.on{background:var(--y); color:#1B2A31}
+.v3hint{top:8px; bottom:auto}
+.camsw{display:flex; border-radius:12px; overflow:hidden; border:2px solid var(--line); flex:none}
+.camsw button{flex:1; border:0; background:var(--card); padding:7px 6px; font-weight:900; font-size:13px; white-space:nowrap}
+.camsw button+button{border-left:2px solid var(--line)}
+.camsw button.on{background:var(--char); color:#fff}
+.tabs{display:inline-flex; border-radius:12px; overflow:hidden; border:2px solid var(--line)}
+.tabs button{border:0; background:var(--card); padding:6px 12px; font-weight:900; font-size:14px}
+.tabs button.on{background:var(--char); color:#fff}
+.opts .opt{flex:1; min-width:150px; justify-content:space-between}
+.mrow .sp{flex:1}
+.board.compact .tl{row-gap:10px; padding-top:2px}
+.board.compact .track{height:30px}
+.board.compact .bar{top:3px; bottom:3px}
+.go.sm{padding:6px 12px; font-size:13px; border-radius:12px; box-shadow:0 3px 0 var(--line)}
+.banner .go+.go{margin-left:8px}
+.viewsw{display:inline-flex; border-radius:10px; overflow:hidden; border:2px solid var(--line)}
+.viewsw button{border:0; background:var(--card); padding:5px 10px; font-weight:900; font-size:13px}
+.viewsw button.on{background:var(--char); color:#fff}
+.site2d{position:absolute; inset:0; width:100%; height:100%}
+.s2sky{fill:#BFDDF0} .s2soil{fill:#8A6A4A} .s2ground{fill:#9B7A55} .s2dug{fill:#3A2A1D} .s2pipe{fill:#A9BDB0; stroke:#6F8478; stroke-width:1}
+.s2fill{fill:#C2A178} .s2tick{stroke:#2B221B; stroke-width:1.5} .s2lab{fill:#2B221B; font-size:12px; font-weight:800}
+.s2seg{fill:#264653; font-size:11px; font-weight:900} .s2crew{fill:#fff; font-size:13px; font-weight:900}
+.v3note{position:absolute; right:10px; top:8px; z-index:2; font-size:12px; font-weight:800; color:#1B2A31; background:rgba(255,255,255,.75); padding:3px 8px; border-radius:8px}
+
+/* equipment trainings: slot + charts side by side + budget */
+.eqslot .bhd{margin-bottom:6px}
+.eqslot .banner{padding:8px 12px; font-size:15px}
+.eqslot .pb{height:30px; margin:6px 0}
+.eqslot .mhd{font-size:15px; gap:6px}
+.eqslot .mhd .chip{padding:3px 9px; font-size:13px}
+.eqslot .opts .opt{min-width:130px; padding:4px 4px 4px 8px}
+.charts{display:flex; flex-direction:column; gap:8px; flex:none !important}
+.charts .barb{flex:none}
+.charts .barb .tl{row-gap:8px; padding-top:2px}
+.charts .barb .track{height:28px}
+.charts .barb .bar{top:3px; bottom:3px; font-size:12px}
+.charts .lobb{flex:none}
+.charts .board{display:flex; flex-direction:column; min-height:0; padding:8px 10px}
+.charts .board .bhd{margin-bottom:4px; font-size:14px}
+.charts svg.lob{width:100%; height:auto; max-height:460px}
+@media (max-width:1000px){.charts{grid-template-columns:1fr} .charts svg.lob{height:auto}}
+.tl.narrow .tl-row,.tl.narrow .tl-axis{grid-template-columns:28px minmax(0,1fr) 18px; gap:4px}
+.tl.narrow{row-gap:10px; padding-top:4px}
+.tl.narrow .track{height:30px}
+.tl.narrow .bar{top:3px; bottom:3px; font-size:11px}
+.tl.narrow .tl-lab{font-size:18px}
+.dl{position:absolute; top:-3px; bottom:-3px; width:0; border-left:3px dashed var(--bad); pointer-events:none; z-index:2}
+.dlab{position:absolute; transform:translateX(-50%); top:14px; font-size:11px; font-weight:900; color:var(--bad); white-space:nowrap}
+.tl-axis .ax{height:30px}
+.budgetleft{font-weight:900; font-size:14px; color:var(--good)}
+.budgetleft.bad{color:var(--bad)}
+.budgetleft small{color:var(--soft); font-weight:700}
+.lob .dline{stroke:var(--bad); stroke-width:2; stroke-dasharray:5 4}
+.lob .dtxt{fill:var(--bad); font-size:10px; font-weight:900}
+.lob .notetxt{fill:var(--good); font-size:11px; font-weight:900}
+.lob .notetxt.bad{fill:var(--bad)}
+.budget .tbl td{padding:1px 6px; font-size:12px; line-height:1.35}
+.budget .tbl th{padding:2px 6px}
+.budget .bhd{margin-bottom:2px; font-size:14px}
+.budget{padding:8px 12px}
+.tbl td.muted{color:var(--soft)}
+.no3d{padding:20px; text-align:center; line-height:1.5; font-weight:700; font-size:14px}
+</style>
+
+<div id="root"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* ===== 3D site scene — ported from The Pull (Three.js r128). 300 ft = 10 segments of 30 ft. ===== */
+const SEGMENTS = 10, SEG_X0 = 60, SEG_W = 88, segX = s => SEG_X0 + s * SEG_W;
+const TRADES = ['exc', 'pipe', 'back'];
+const CREW = { exc:{ k:'dig', label:'EXCAVATION' }, pipe:{ k:'pipe', label:'PIPE LAYING' }, back:{ k:'fill', label:'BACKFILL' } };
+const UNIT = { Small:{ k:.8, body:'#F6CB4A' }, Standard:{ k:1, body:'#F2B705' }, Heavy:{ k:1.25, body:'#D69A00' } };
+const fleetUnits = qty => ['Heavy', 'Standard', 'Small'].flatMap(k => Array((qty && qty[k]) || 0).fill(k));
+
+let S3why = '';
+const S3 = (() => {
+  let R = null, scene, cam, sun, ok = null, built = false, raf = 0, lastW = 0, lastH = 0, t0 = performance.now(), prev = 0;
+  const view = { theta:-0.62, phi:0.40, dist:0, tx:0, ty:0, tz:0, user:false, mode:'follow', focus:null };
+  const X = x => (x - 500) / 10, SW = SEG_W / 10, TW = 2.8, TDP = 2.4, RW = 13, PZ = 2.45;
+  const segs = [], fleets = {};
+  const Z = { exc:4.8, pipe:5.2, back:-6.0 };
+  let seed = 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  function supported(){
+    if (ok !== null) return ok;
+    try {
+      if (!window.THREE){ S3why = 'Three.js did not load'; return (ok = false); }
+      const c = document.createElement('canvas');
+      const gl = c.getContext && (c.getContext('webgl2') || c.getContext('webgl') || c.getContext('experimental-webgl'));
+      ok = !!gl; if (!ok) S3why = 'WebGL is turned off or not supported in this browser';
+      try { const lc = gl && gl.getExtension('WEBGL_lose_context'); lc && lc.loseContext(); } catch (e){}
+    } catch (e){ ok = false; S3why = 'WebGL check failed'; }
+    return ok;
+  }
+  const active = () => supported();
+  /* ---------- helpers ---------- */
+  const std = (c, r = 0.85, m = 0.05, o = {}) => new THREE.MeshStandardMaterial({ color:c, roughness:r, metalness:m, ...o });
+  const mesh = (g, m, cast = true) => { const x = new THREE.Mesh(g, m); x.castShadow = cast; x.receiveShadow = true; return x; };
+  const bx = (w, h, d, m) => mesh(new THREE.BoxGeometry(w, h, d), m);
+  const cy = (r1, r2, h, m, s = 16) => mesh(new THREE.CylinderGeometry(r1, r2, h, s), m);
+  const put = (o, x, y, z, p) => { o.position.set(x, y, z); if (p) p.add(o); return o; };
+  /* a bar from p1 to p2 in the parent's x-y plane (booms, sticks, cylinders) */
+  function bar(p, a, b, w, d, m, round){
+    const L = Math.hypot(b[0] - a[0], b[1] - a[1]), ang = Math.atan2(b[1] - a[1], b[0] - a[0]);
+    const o = round ? cy(w, w, L, m, 10) : bx(L, w, d, m);
+    if (round) o.rotation.z = ang - Math.PI / 2; else o.rotation.z = ang;
+    o.position.set((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, 0); p.add(o); return o;
+  }
+  /* a bar between two 3D points */
+  function beam(p, a, b, w, m){
+    const A = new THREE.Vector3(...a), B = new THREE.Vector3(...b), o = bx(w, w, A.distanceTo(B), m);
+    o.position.copy(A).add(B).multiplyScalar(0.5); o.lookAt(B); p.add(o); return o;
+  }
+  function tex(cols, size, opts = {}){
+    const c = document.createElement('canvas'); c.width = c.height = size;
+    const g = c.getContext('2d'); g.fillStyle = cols[0]; g.fillRect(0, 0, size, size);
+    for (let i = 0; i < size * size / 6; i++){ g.globalAlpha = 0.25 + rnd() * 0.5; g.fillStyle = cols[1 + Math.floor(rnd() * (cols.length - 1))]; const s = 1 + rnd() * 3; g.fillRect(rnd() * size, rnd() * size, s, s); }
+    if (opts.ruts){ g.globalAlpha = 0.22; g.strokeStyle = '#3d2c1e'; g.lineWidth = 5;
+      [0.18, 0.27, 0.62, 0.71].forEach(v => { g.beginPath(); g.moveTo(0, v * size); for (let x = 0; x <= size; x += 16) g.lineTo(x, v * size + Math.sin(x / 37) * 3); g.stroke(); }); }
+    if (opts.stones){ for (let i = 0; i < 90; i++){ g.globalAlpha = 0.8; g.fillStyle = ['#9b9286', '#7d746a', '#b5ab9c'][i % 3]; g.beginPath(); g.arc(rnd() * size, rnd() * size, 1 + rnd() * 2.5, 0, 7); g.fill(); } }
+    g.globalAlpha = 1;
+    const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4; return t;
+  }
+  function skyTex(){
+    const c = document.createElement('canvas'); c.width = 512; c.height = 512; const g = c.getContext('2d');
+    const gr = g.createLinearGradient(0, 0, 0, 512); gr.addColorStop(0, '#6f9cc4'); gr.addColorStop(0.55, '#c9d8e3'); gr.addColorStop(1, '#e9eef1');
+    g.fillStyle = gr; g.fillRect(0, 0, 512, 512);
+    for (let i = 0; i < 70; i++){                         // soft overcast clouds
+      const x = rnd() * 560 - 24, y = 20 + rnd() * 260, r = 30 + rnd() * 70, rg = g.createRadialGradient(x, y, 0, x, y, r);
+      const sh = 225 + Math.floor(rnd() * 30); rg.addColorStop(0, `rgba(${sh},${sh},${sh + 3},.75)`); rg.addColorStop(1, 'rgba(255,255,255,0)');
+      g.fillStyle = rg; g.fillRect(x - r, y - r, 2 * r, 2 * r);
+    }
+    return new THREE.CanvasTexture(c);
+  }
+  function label(text, bg, fg, w = 256){
+    const c = document.createElement('canvas'); c.width = w; c.height = 64;
+    const g = c.getContext('2d'); g.font = '900 34px Nunito Sans, system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    if (bg){ g.fillStyle = bg; const r = 26; g.beginPath(); g.moveTo(r, 6); g.arcTo(w - 6, 6, w - 6, 58, r); g.arcTo(w - 6, 58, 6, 58, r); g.arcTo(6, 58, 6, 6, r); g.arcTo(6, 6, w - 6, 6, r); g.fill(); }
+    g.fillStyle = fg || '#fff'; g.fillText(text, w / 2, 34);
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map:new THREE.CanvasTexture(c), depthTest:false, transparent:true }));
+    sp.scale.set(w / 64 * 1.9, 1.9, 1); sp.renderOrder = 10; return sp;
+  }
+  /* ---------- shared materials ---------- */
+  let MT;
+  function mats(){
+    MT = {
+      dark:std(0x2a2a2a, 0.75, 0.25), rubber:std(0x181818, 0.95, 0), steel:std(0x9aa3a8, 0.35, 0.8), chrome:std(0xdfe4e6, 0.2, 0.9),
+      glass:std(0x24343d, 0.12, 0.7, { transparent:true, opacity:0.85 }), red:std(0xc9302c, 0.6, 0.2), white:std(0xf2f2ee, 0.6, 0.1),
+      pipe:std(0xa9bdb0, 0.45, 0.35, { side:THREE.DoubleSide }), pipeEnd:std(0x8a5a35, 0.7, 0.4), timber:std(0x9a7a52, 0.95, 0),
+      wall:std(0x6e4f35, 1, 0), bed:std(0x3d2b1d, 1, 0), fill:std(0x84603f, 0.98, 0), spoil:std(0x76563a, 1, 0),
+      cover:std(0x8b6c4c, 1, 0), skin:std(0xc68b5d, 0.8, 0), vestO:std(0xff7a1a, 0.6, 0), vestL:std(0xc9f02d, 0.6, 0),
+      reflect:std(0xe8e8e8, 0.3, 0.6), pants:std(0x2e3a4f, 0.9, 0), khaki:std(0xa38f6a, 0.9, 0)
+    };
+  }
+  const yel = hex => std(new THREE.Color(hex).getHex(), 0.5, 0.18);
+  /* ---------- crew member in hi-vis ---------- */
+  function worker(vest, hat){
+    const g = new THREE.Group();
+    [-0.11, 0.11].forEach(z => put(bx(0.17, 0.86, 0.19, rnd() < 0.5 ? MT.pants : MT.khaki), 0, 0.43, z, g));
+    put(bx(0.28, 0.62, 0.46, vest), 0, 1.17, 0, g);
+    [1.02, 1.3].forEach(y => put(bx(0.29, 0.05, 0.47, MT.reflect), 0, y, 0, g));
+    [-0.29, 0.29].forEach(z => { const a = put(bx(0.13, 0.6, 0.13, vest), 0.02, 1.12, z, g); a.rotation.x = z > 0 ? -0.15 : 0.15; });
+    put(mesh(new THREE.SphereGeometry(0.13, 12, 10), MT.skin), 0, 1.62, 0, g);
+    put(mesh(new THREE.SphereGeometry(0.155, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), hat), 0, 1.66, 0, g);
+    put(cy(0.2, 0.2, 0.025, hat, 14), 0, 1.66, 0, g);
+    return g;
+  }
+  /* ---------- crawler undercarriage ---------- */
+  function tracks(g, L, W, h = 0.8){
+    [-1, 1].forEach(s => {
+      const z = s * (W / 2 - 0.3);
+      put(bx(L - h, h, 0.6, MT.rubber), 0, h / 2, z, g);
+      [-1, 1].forEach(e => { const w = cy(h / 2, h / 2, 0.6, MT.rubber, 14); w.rotation.x = Math.PI / 2; put(w, e * (L - h) / 2, h / 2, z, g); });
+      for (let i = 0; i < 4; i++){ const r = cy(0.13, 0.13, 0.62, MT.dark, 8); r.rotation.x = Math.PI / 2; put(r, -L / 2 + h * 0.6 + i * (L - h * 1.2) / 3, 0.2, z, g); }
+      put(bx(L - h * 1.2, 0.22, 0.4, MT.dark), 0, h - 0.05, z, g);
+    });
+    put(bx(L * 0.55, 0.35, W - 1.0, MT.dark), 0, h * 0.55, 0, g);
+  }
+  /* ---------- hydraulic excavator (arm along +x before turning) ---------- */
+  function excavator(col, blade){
+    const g = new THREE.Group(), Y = yel(col), parts = {};
+    tracks(g, 4.4, 2.9);
+    if (blade){ put(bx(0.25, 0.75, 2.9, Y), 2.55, 0.5, 0, g); beam(g, [2.4, 0.6, 0.8], [1.6, 0.6, 0.8], 0.16, MT.dark); beam(g, [2.4, 0.6, -0.8], [1.6, 0.6, -0.8], 0.16, MT.dark); }
+    const house = put(new THREE.Group(), 0, 1.0, 0, g);
+    put(cy(0.85, 0.85, 0.25, MT.dark, 18), 0, 0.12, 0, house);
+    put(bx(2.9, 0.95, 2.5, Y), -0.35, 0.72, 0, house);
+    const cw = cy(1.25, 1.25, 2.5, Y, 20); cw.rotation.x = Math.PI / 2; cw.scale.set(0.45, 1, 0.75); put(cw, -1.75, 0.7, 0, house);
+    put(bx(1.6, 0.35, 1.3, Y), -0.95, 1.33, -0.4, house);                         // engine hood
+    put(cy(0.07, 0.07, 0.6, MT.dark, 8), -0.8, 1.75, -0.7, house);                // exhaust
+    const cab = put(new THREE.Group(), 0.55, 1.2, 0.72, house);
+    put(bx(1.15, 1.45, 1.0, Y), 0, 0.72, 0, cab);
+    put(bx(1.17, 1.05, 0.9, MT.glass), 0.02, 0.85, 0.02, cab);
+    put(bx(1.2, 0.1, 1.05, Y), 0, 1.47, 0, cab);
+    [[-0.9, 1.6, -0.9], [-0.2, 1.6, -0.9]].forEach(p => put(bx(0.05, 0.4, 0.05, Y), ...p, house));   // handrails
+    const boom = put(new THREE.Group(), 0.85, 1.25, -0.2, house); parts.boom = boom;
+    bar(boom, [0, 0], [2.6, 2.6], 0.55, 0.5, Y); bar(boom, [2.5, 2.55], [5.0, 1.9], 0.48, 0.45, Y);
+    bar(boom, [0.2, -0.45], [1.7, 1.2], 0.11, 0, MT.chrome, true);                 // boom cylinders
+    bar(boom, [0.6, -0.55], [1.9, 0.95], 0.17, 0, MT.dark, true);
+    bar(boom, [2.7, 3.0], [4.6, 2.55], 0.13, 0, MT.dark, true);                   // stick cylinder
+    const stick = put(new THREE.Group(), 5.0, 1.9, 0, boom); parts.stick = stick;
+    bar(stick, [0, 0], [0.45, -2.7], 0.42, 0.4, Y); bar(stick, [-0.35, 0.3], [0.1, -2.1], 0.1, 0, MT.chrome, true);
+    const bucket = put(new THREE.Group(), 0.45, -2.7, 0, stick); parts.bucket = bucket;
+    const sh = new THREE.Shape(); sh.moveTo(0, 0.15); sh.lineTo(0.15, -0.85); sh.quadraticCurveTo(0.6, -1.05, 1.05, -0.75); sh.lineTo(0.8, -0.25); sh.quadraticCurveTo(0.45, 0.05, 0, 0.15);
+    const bk = mesh(new THREE.ExtrudeGeometry(sh, { depth:1.0, bevelEnabled:false }), MT.dark); bk.position.z = -0.5; bucket.add(bk);
+    for (let i = 0; i < 5; i++) put(bx(0.22, 0.09, 0.1, MT.steel), 1.12, -0.78, -0.4 + i * 0.2, bucket).rotation.z = 0.5;
+    parts.house = house;
+    return { g, parts, kind:'exc', len:5.4 };
+  }
+  /* ---------- sideboom pipelayer (A-frame boom over the trench side, -z) ---------- */
+  function sideboom(col){
+    const g = new THREE.Group(), Y = yel(col), parts = {};
+    tracks(g, 4.0, 3.0);
+    put(bx(2.0, 1.0, 1.8, Y), 0.8, 1.35, 0, g);                                    // engine hood
+    put(bx(1.4, 0.6, 2.4, Y), -0.8, 1.15, 0, g);
+    const cab = put(new THREE.Group(), -0.75, 1.45, 0.15, g);
+    [[-0.6, -0.6], [-0.6, 0.6], [0.6, -0.6], [0.6, 0.6]].forEach(([x, z]) => put(bx(0.09, 1.5, 0.09, Y), x, 0.75, z, cab));
+    put(bx(1.35, 0.12, 1.35, Y), 0, 1.5, 0, cab); put(bx(1.2, 1.0, 1.15, MT.glass), 0, 0.75, 0, cab);
+    for (let i = 0; i < 4; i++) put(bx(2.6, 0.32, 0.45, Y), -0.3, 0.95 + i * 0.34, 1.75, g);   // counterweight slabs
+    put(bx(0.06, 0.06, 0.06, MT.dark), 0, 0, 0, g);
+    const tip = [0, 6.4, -4.4];
+    beam(g, [1.5, 0.9, -1.35], tip, 0.2, Y); beam(g, [-1.5, 0.9, -1.35], tip, 0.2, Y);
+    beam(g, [0, 3.2, 0.9], tip, 0.06, MT.dark);                                   // boom line
+    const hang = put(new THREE.Group(), ...tip, g); parts.hang = hang;
+    parts.cable = put(bx(0.04, 1, 0.04, MT.dark), 0, -0.5, 0, hang);
+    parts.hook = put(new THREE.Group(), 0, -1, 0, hang);
+    put(bx(0.35, 0.45, 0.25, Y), 0, 0, 0, parts.hook);
+    const p = cy(0.55, 0.55, 6, MT.pipe, 18); p.rotation.z = Math.PI / 2; parts.hpipe = put(p, 0, -0.85, 0, parts.hook);
+    return { g, parts, kind:'pipe', len:5.0 };
+  }
+  /* ---------- mobile truck crane (boom turned toward the trench) ---------- */
+  function truckCrane(col){
+    const g = new THREE.Group(), Y = yel(col), parts = {};
+    put(bx(9.2, 0.55, 2.3, MT.dark), -4.4, 1.05, 0, g);
+    put(bx(7.0, 0.35, 2.55, Y), -5.3, 1.48, 0, g);
+    [[-1.2, 1.2], [-2.6, 1.2], [-6.3, 1.2], [-7.7, 1.2]].forEach(([x]) => [-1.08, 1.08].forEach(z => {
+      const w = cy(0.55, 0.55, 0.45, MT.rubber, 18); w.rotation.x = Math.PI / 2; put(w, x, 0.55, z, g);
+      const h = cy(0.25, 0.25, 0.47, MT.steel, 10); h.rotation.x = Math.PI / 2; put(h, x, 0.55, z, g);
+    }));
+    const cab = put(new THREE.Group(), -0.9, 1.3, 0, g);                              // driver cab
+    put(bx(1.8, 1.7, 2.45, Y), 0, 0.85, 0, cab);
+    put(bx(0.05, 0.8, 2.1, MT.glass), 0.91, 1.15, 0, cab);
+    [-1.23, 1.23].forEach(z => put(bx(1.2, 0.7, 0.03, MT.glass), 0.2, 1.15, z, cab));
+    put(bx(0.15, 0.35, 2.4, MT.dark), 0.95, 0.15, 0, cab);
+    [-2.2, -8.3].forEach(x => [-1, 1].forEach(s => {                                   // outriggers down
+      put(bx(0.32, 0.3, 1.6, Y), x, 0.95, s * 1.85, g);
+      put(cy(0.1, 0.1, 0.9, MT.chrome, 8), x, 0.5, s * 2.5, g); put(cy(0.32, 0.32, 0.08, MT.dark, 12), x, 0.04, s * 2.5, g);
+    }));
+    const sup = put(new THREE.Group(), -6.6, 1.65, 0, g); parts.house = sup;
+    put(cy(0.95, 0.95, 0.3, MT.dark, 18), 0, 0.15, 0, sup);
+    put(bx(3.0, 1.0, 2.2, Y), -0.6, 0.8, 0, sup);
+    put(bx(1.2, 0.9, 2.1, MT.dark), -2.4, 0.75, 0, sup);                                 // counterweight
+    const oc = put(new THREE.Group(), 0.6, 0.5, 0.85, sup); put(bx(1.3, 1.25, 0.75, Y), 0, 0.65, 0, oc); put(bx(1.32, 0.8, 0.6, MT.glass), 0.05, 0.75, 0, oc);
+    const E = 1.12, boom = put(new THREE.Group(), 0.9, 1.25, -0.25, sup); boom.rotation.z = E; parts.boomG = boom;
+    put(bx(4.6, 0.75, 0.75, Y), 2.3, 0, 0, boom); put(bx(4.0, 0.6, 0.6, Y), 5.8, 0, 0, boom); put(bx(3.4, 0.46, 0.46, Y), 8.6, 0, 0, boom);
+    put(bx(0.2, 0.62, 0.62, MT.dark), 4.6, 0, 0, boom); put(bx(0.2, 0.48, 0.48, MT.dark), 7.8, 0, 0, boom);
+    const sv = cy(0.32, 0.32, 0.3, MT.red, 14); sv.rotation.x = Math.PI / 2; put(sv, 10.3, 0, 0, boom);
+    bar(sup, [0.2, 0.6], [2.4 * Math.cos(E) + 0.9, 2.4 * Math.sin(E) + 1.25], 0.16, 0, MT.chrome, true);   // luffing cylinder
+    const tipX = 0.9 + 10.3 * Math.cos(E), tipY = 1.25 + 10.3 * Math.sin(E);
+    const hang = put(new THREE.Group(), tipX, tipY, -0.25, sup); parts.hang = hang;
+    parts.cable = put(bx(0.04, 1, 0.04, MT.dark), 0, -0.5, 0, hang);
+    parts.hook = put(new THREE.Group(), 0, -1, 0, hang);
+    put(bx(0.4, 0.55, 0.32, Y), 0, 0, 0, parts.hook); put(bx(0.42, 0.12, 0.34, MT.dark), 0, 0.12, 0, parts.hook);
+    const p = cy(0.55, 0.55, 6, MT.pipe, 18); p.rotation.x = Math.PI / 2; parts.hpipe = put(p, 0, -0.9, 0, parts.hook);   // along the ROW once turned
+    sup.rotation.y = Math.PI / 2;                                                        // boom faces the trench
+    return { g, parts, kind:'crane', len:9.6, tipY };
+  }
+  function unit(tr, type){
+    const k = UNIT[type].k * 0.8, col = UNIT[type].body;
+    let u;
+    if (tr === 'exc'){ u = excavator(col, false); u.parts.house.rotation.y = Math.PI / 2; u.base = Math.PI / 2; }
+    else if (tr === 'back'){ u = excavator(col, true); u.parts.house.rotation.y = -Math.PI / 2; u.base = -Math.PI / 2; }
+    else u = type === 'Small' ? sideboom(col) : truckCrane(col);
+    u.g.scale.setScalar(k); u.len *= k; u.k = k;
+    return u;
+  }
+  /* ---------- scene ---------- */
+  function forest(){
+    const pos = [];
+    for (let i = 0; i < 900; i++){
+      const side = rnd() < 0.55 ? -1 : 1, z = side * (RW + (side > 0 ? 34 : 5) + Math.pow(rnd(), 0.7) * 90), x = -170 + rnd() * 340;   // near (camera) side kept clear
+      pos.push([x, z, 0.7 + rnd() * 1.1]);
+    }
+    for (let i = 0; i < 60; i++) pos.push([-170 + rnd() * 340, -(RW + 3 + rnd() * 4), 0.5 + rnd() * 0.5]);   // young trees at the edge
+    const layers = [[2.2, 3.4, 2.4], [1.75, 3.0, 4.2], [1.3, 2.6, 5.9], [0.8, 2.2, 7.4], [0.35, 1.4, 8.7]];
+    const greens = [0x23452c, 0x2a5233, 0x1f3d27];
+    const dummy = new THREE.Object3D();
+    const trunk = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.2, 0.3, 3, 6), std(0x4a3626), pos.length);
+    const ims = layers.map((l, i) => new THREE.InstancedMesh(new THREE.ConeGeometry(l[0], l[1], 8), std(greens[i % 3], 0.95, 0), pos.length));
+    pos.forEach(([x, z, s], i) => {
+      dummy.position.set(x, 1.5 * s, z); dummy.scale.set(s, s, s); dummy.rotation.y = rnd() * 6; dummy.updateMatrix(); trunk.setMatrixAt(i, dummy.matrix);
+      layers.forEach((l, j) => { dummy.position.set(x, l[2] * s, z); dummy.updateMatrix(); ims[j].setMatrixAt(i, dummy.matrix); });
+    });
+    [trunk, ...ims].forEach(m => { m.castShadow = true; scene.add(m); });
+    const hill = std(0x2d4a31, 1, 0);
+    [[-120, -190, 90, 22], [40, -210, 120, 30], [150, -180, 80, 18], [-60, 200, 110, 24], [110, 190, 90, 20]].forEach(([x, z, r, h]) => {
+      const m = mesh(new THREE.SphereGeometry(1, 20, 10), hill, false); m.scale.set(r, h, r * 0.5); put(m, x, -2, z, scene);
+    });
+  }
+  function build(){
+    R = new THREE.WebGLRenderer({ antialias:true });
+    R.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+    R.shadowMap.enabled = true; R.shadowMap.type = THREE.PCFSoftShadowMap;
+    R.domElement.className = 'site3d';
+    scene = new THREE.Scene(); mats();
+    scene.background = skyTex(); scene.fog = new THREE.Fog(0xd9e2e8, 70, 260);
+    cam = new THREE.PerspectiveCamera(38, 1, 0.5, 700);
+    scene.add(new THREE.HemisphereLight(0xe8f0f5, 0x5a4a35, 0.75));
+    sun = new THREE.DirectionalLight(0xfff4e0, 0.95); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
+    Object.assign(sun.shadow.camera, { left:-45, right:45, top:45, bottom:-45, near:1, far:220 }); sun.shadow.bias = -0.0006;
+    scene.add(sun); scene.add(sun.target);
+    const x0 = X(segX(0)), x1 = X(segX(SEGMENTS)), H = TDP + 1;
+    const grass = std(0xffffff, 1, 0, { map:(() => { const t = tex(['#5d7f3e', '#4f6e34', '#6c8f48', '#7f9b52', '#45622f'], 256); t.repeat.set(40, 18); return t; })() });
+    [-1, 1].forEach(s => { const m = mesh(new THREE.PlaneGeometry(420, 220), grass, false); m.rotation.x = -Math.PI / 2; put(m, 0, 0, s * (RW + 110), scene); });
+    const dirtT = tex(['#8a6a4a', '#7a5b3e', '#957452', '#6c5038', '#a3825e'], 256, { ruts:true, stones:true });
+    const dirt = (rx, rz) => { const t = dirtT.clone(); t.needsUpdate = true; t.repeat.set(rx, rz); return std(0xffffff, 1, 0, { map:t }); };
+    const side = (w, d) => [MT.wall, MT.wall, dirt(w / 12, d / 12), MT.wall, MT.wall, MT.wall];
+    const dW = RW - TW / 2;
+    [-1, 1].forEach(s => put(mesh(new THREE.BoxGeometry(420, H, dW), side(420, dW), false), 0, -H / 2, s * (TW / 2 + dW / 2), scene));
+    [[x0 - 100, 200], [x1 + 100, 200]].forEach(([x, w]) => put(mesh(new THREE.BoxGeometry(w, H, TW), side(w, TW), false), x, -H / 2, 0, scene));
+    put(mesh(new THREE.BoxGeometry(x1 - x0, 0.3, TW), MT.bed, false), (x0 + x1) / 2, -TDP - 0.15, 0, scene);
+    // topsoil windrow on the far edge, grass verge mounds
+    const ts = mesh(new THREE.CylinderGeometry(1, 1, 420, 10), std(0x4e3b29, 1, 0, { flatShading:true }), false); ts.rotation.z = Math.PI / 2; ts.scale.set(0.9, 1, 2.0); put(ts, 0, -0.25, -(RW - 1.8), scene);
+    // survey stakes with orange flagging along both edges
+    const stk = new THREE.InstancedMesh(new THREE.BoxGeometry(0.08, 1.2, 0.08), std(0xd8c39a), 80), flag = new THREE.InstancedMesh(new THREE.BoxGeometry(0.06, 0.18, 0.25), std(0xff6a13), 80);
+    const dm = new THREE.Object3D(); let n = 0;
+    for (let x = -150; x < 150 && n < 80; x += 7.5) [-1, 1].forEach(s => { if (n >= 80) return; dm.position.set(x, 0.6, s * (RW - 0.4)); dm.updateMatrix(); stk.setMatrixAt(n, dm.matrix); dm.position.y = 1.1; dm.position.z += 0.13 * s; dm.updateMatrix(); flag.setMatrixAt(n, dm.matrix); n++; });
+    scene.add(stk, flag);
+    forest();
+    for (let s = 0; s < SEGMENTS; s++){
+      const xs = X(segX(s));
+      const cover = mesh(new THREE.BoxGeometry(1, 1, 1), [MT.wall, MT.wall, MT.cover, MT.wall, MT.wall, MT.wall], false); cover.scale.set(SW, TDP, TW); put(cover, xs + SW / 2, -TDP / 2 + 0.005, 0, scene);
+      const pipe = cy(0.55, 0.55, 1, MT.pipe, 20); pipe.rotation.z = Math.PI / 2; pipe.position.y = -TDP + 0.62; scene.add(pipe);
+      const fill = mesh(new THREE.BoxGeometry(1, 1, 1), MT.fill, false); fill.scale.y = TDP + 0.2; fill.position.y = -TDP / 2 + 0.1; scene.add(fill);
+      const sg = new THREE.IcosahedronGeometry(1, 3), pa = sg.attributes.position;
+      for (let i = 0; i < pa.count; i++){ const f = 0.9 + rnd() * 0.16; pa.setXYZ(i, pa.getX(i) * f, pa.getY(i) * f, pa.getZ(i) * f); }
+      sg.computeVertexNormals();
+      const spoil = mesh(sg, MT.spoil); put(spoil, xs + SW / 2, 0, -(TW / 2 + 2.1), scene);
+      // the joint strung on timber skids beside the trench, waiting to be lowered in
+      [xs + 1.6, xs + SW - 1.6].forEach(x => { for (let i = 0; i < 3; i++) put(bx(0.3, 0.22, 1.3, MT.timber), x, 0.11 + i * 0.22, PZ, scene).rotation.y = i % 2 ? 0.08 : -0.06; });
+      const strung = cy(0.55, 0.55, 1, MT.pipe, 20); strung.rotation.z = Math.PI / 2; strung.position.set(0, 1.2, PZ); scene.add(strung);
+      const ends = [0, 1].map(() => { const e = cy(0.56, 0.56, 0.18, MT.pipeEnd, 20); e.rotation.z = Math.PI / 2; e.position.set(0, 1.2, PZ); scene.add(e); return e; });
+      const lb = label('S' + (s + 1), 'rgba(38,70,83,.85)', '#fff', 128); lb.scale.set(2.6, 1.3, 1); put(lb, xs + SW / 2, 0.6, RW - 3.2, scene);
+      put(bx(0.18, 1.3, 0.18, std(0xffb703)), xs, 0.65, RW - 3.2, scene);
+      segs.push({ xs, cover, pipe, fill, spoil, strung, ends });
+    }
+    TRADES.forEach(tr => {
+      const g = new THREE.Group(); g.position.z = Z[tr]; scene.add(g);
+      const crew = new THREE.Group(); g.add(crew);
+      const spots = { exc:[[2.6, -2.3], [-7.5, -2.0]], pipe:[[1.4, -2.6], [-1.6, -2.8], [-4.0, -2.4]], back:[[2.8, -2.2], [-6.5, -2.4]] }[tr];
+      spots.forEach(([x, z], i) => { const w = worker(i % 2 ? MT.vestL : MT.vestO, i === 0 ? MT.red : MT.white); w.position.set(x, 0, z); w.rotation.y = -Math.PI / 2 + (rnd() - 0.5); w.traverse(m => { if (m.isMesh) m.castShadow = true; }); crew.add(w); });
+      const zz = label('💤 $', 'rgba(214,58,47,.92)', '#fff', 160); zz.visible = false; scene.add(zz);
+      fleets[tr] = { g, crew, units:[], key:'', lab:null, labText:'', zz, st:'off' };
+    });
+    controls(); built = true;
+  }
+  function controls(){
+    const el = R.domElement; let drag = null; const pts = new Map();
+    el.addEventListener('pointerdown', e => { el.setPointerCapture(e.pointerId); pts.set(e.pointerId, e); drag = { x:e.clientX, y:e.clientY, th:view.theta, ph:view.phi, d:view.cd || view.dist, pinch:null }; el.style.cursor = 'grabbing'; });
+    el.addEventListener('pointermove', e => {
+      if (!drag) return; pts.set(e.pointerId, e);
+      if (pts.size === 2){ const [a, b] = [...pts.values()], dd = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+        if (!drag.pinch) drag.pinch = dd; view.user = true; view.dist = Math.max(14, Math.min(220, drag.d * drag.pinch / dd)); return; }
+      view.theta = drag.th - (e.clientX - drag.x) * 0.006;
+      view.phi = Math.max(0.08, Math.min(1.35, drag.ph + (e.clientY - drag.y) * 0.005));
+    });
+    const up = e => { pts.delete(e.pointerId); if (!pts.size){ drag = null; el.style.cursor = ''; } };
+    el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+    el.addEventListener('wheel', e => { e.preventDefault(); if (!view.user){ view.user = true; view.dist = view.cd || view.dist; } view.dist = Math.max(14, Math.min(220, view.dist * (1 + Math.sign(e.deltaY) * 0.1))); }, { passive:false });
+    el.addEventListener('dblclick', () => { view.user = false; view.mode = view.mode === 'follow' ? 'whole' : 'follow'; view.theta = -0.62; view.phi = view.mode === 'whole' ? 0.55 : 0.40; fit(); });
+  }
+  function fit(){
+    const a = Math.max(0.35, lastW / Math.max(1, lastH));
+    if (!view.user) view.dist = view.mode === 'whole' ? Math.max(60, Math.min(190, 62 + 52 / a)) : Math.max(24, Math.min(64, 24 + 14 / a));
+  }
+  function setFleet3(tr, qty){
+    const f = fleets[tr], key = JSON.stringify(qty || {});
+    if (f.key === key) return;
+    f.key = key; f.units.forEach(u => f.g.remove(u.g)); f.units = [];
+    let x = 0;
+    fleetUnits(qty).slice(0, 5).forEach(type => {
+      const u = unit(tr, type); u.g.position.x = x;
+      if (u.kind === 'crane') u.g.position.z = 0.3;
+      f.g.add(u.g); f.units.push(u); x -= u.len + 1.4;
+    });
+    const n = fleetUnits(qty).length, text = n ? CREW[tr].label + (n > 1 ? ` ×${n}` : '') : '';
+    if (text !== f.labText){
+      if (f.lab) scene.remove(f.lab);
+      f.lab = text ? label(text, getComputedStyle(document.documentElement).getPropertyValue('--' + CREW[tr].k).trim() || '#333', '#fff', 360) : null;
+      if (f.lab) scene.add(f.lab); f.labText = text;
+    }
+  }
+  /* Copy the game state (feet reached per crew) into the 3D scene */
+  function sync(wrap, S){
+    if (!supported() || !wrap) return;
+    if (!built){ try { build(); } catch (e){ ok = false; S3why = 'The 3D scene could not start (' + (e && e.message || e) + ')'; console.warn(e); if (window.__s3fail) window.__s3fail(); return; } }
+    if (R.domElement.parentNode !== wrap){ wrap.appendChild(R.domElement); lastW = 0; }
+    const fr = (ft, k) => Math.max(0, Math.min(1, (ft - k * 30) / 30));
+    for (let s = 0; s < SEGMENTS; s++){
+      const d = fr(S.ft[0], s), p = fr(S.ft[1], s), f = fr(S.ft[2], s), o = segs[s];
+      const rest = SW * (1 - d);
+      o.cover.visible = rest > 0.01; o.cover.scale.x = Math.max(0.01, rest); o.cover.position.x = o.xs + SW * d + rest / 2;
+      o.pipe.visible = p > 0; o.pipe.scale.y = Math.max(0.01, SW * p); o.pipe.position.x = o.xs + SW * p / 2;
+      const left = (SW - 0.4) * (1 - p);
+      o.strung.visible = left > 0.05; o.strung.scale.y = Math.max(0.01, left); o.strung.position.x = o.xs + SW - 0.2 - left / 2;
+      o.ends[0].visible = o.ends[1].visible = o.strung.visible; o.ends[0].position.x = o.xs + SW - 0.2 - left + 0.09; o.ends[1].position.x = o.xs + SW - 0.29;
+      o.fill.visible = f > 0; o.fill.scale.x = Math.max(0.01, SW * f); o.fill.scale.z = TW; o.fill.position.x = o.xs + SW * f / 2;
+      const sp = Math.max(0, d - f); o.spoil.visible = sp > 0.02; o.spoil.scale.set(SW * 0.5 * Math.max(d, 0.05), 1.5 * sp + 0.05, 1.5);
+    }
+    const STAGE = { exc:segX(2) + 40, pipe:segX(4) + 60, back:segX(9) + 50 };
+    TRADES.forEach((tr, i) => {
+      const f = fleets[tr], st = S.st[i] || 'off';
+      const x = st === 'ready' ? STAGE[tr] : SEG_X0 + (S.ft[i] || 0) / 300 * SEGMENTS * SEG_W;
+      setFleet3(tr, st === 'off' ? null : ((S.qty && S.qty[i]) || { Standard:1 }));
+      f.st = st; f.g.visible = st !== 'off'; f.g.position.x = X(x);
+      f.crew.visible = st === 'work' || st === 'ready';
+      if (f.lab){ f.lab.visible = f.g.visible; f.lab.position.set(X(x) - 2, tr === 'pipe' ? 12 : 9, Z[tr]); }
+      f.zz.visible = false;
+    });
+    const ck = S.cam == null ? 'over' : S.cam;
+    if (ck !== view.camKey){ view.camKey = ck; view.user = false; view.theta = -0.62;
+      if (ck === 'over'){ view.mode = 'whole'; view.focus = null; view.phi = 0.55; } else { view.mode = 'follow'; view.focus = TRADES[ck]; view.phi = 0.40; }
+      fit(); }
+    if (!raf) raf = requestAnimationFrame(loop);
+  }
+  function animate(u, work, tt, i){
+    const ph = tt * 2.4 + i * 1.3, p = u.parts;
+    if (u.kind === 'exc'){
+      if (work){
+        p.boom.rotation.z = -0.38 + 0.26 * Math.sin(ph);
+        p.stick.rotation.z = 0.15 + 0.3 * Math.sin(ph + 1.2);
+        p.bucket.rotation.z = 0.4 * Math.sin(ph + 2.2);
+        p.house.rotation.y = u.base + 0.22 * Math.sin(ph * 0.5);
+      } else { p.boom.rotation.z = -0.3; p.stick.rotation.z = 0.35; p.bucket.rotation.z = 0.3; p.house.rotation.y = u.base; }
+      return;
+    }
+    const L = (u.kind === 'crane' ? u.tipY - 2.2 : 4.3) + (work ? 1.1 * (0.5 + 0.5 * Math.sin(ph * 0.6)) : 0);
+    p.cable.scale.y = L; p.cable.position.y = -L / 2; p.hook.position.y = -L;
+  }
+  function loop(now){
+    raf = 0;
+    if (!R || !R.domElement.isConnected) return;
+    const el = R.domElement, w = el.clientWidth, h = el.clientHeight;
+    if (w && h && (w !== lastW || h !== lastH)){ lastW = w; lastH = h; R.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); fit(); }
+    const tt = (now - t0) / 1000, still = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    TRADES.forEach(tr => {
+      const f = fleets[tr], work = f.st === 'work' && !still;
+      f.units.forEach((u, i) => animate(u, work, tt, i));
+      if (f.zz.visible) f.zz.position.y = (tr === 'pipe' ? 14 : 11.2) + 0.4 * Math.sin(tt * 2.5);
+    });
+    let want = 0, wantD = view.dist;
+    if (view.mode === 'follow'){
+      const fs = (view.focus ? [fleets[view.focus]] : TRADES.map(tr => fleets[tr])).filter(f => f.g.visible && (view.focus || f.st !== 'done'));
+      const lo = fs.map(f => f.g.position.x - f.units.reduce((a, u) => a + u.len + 1.4, 0)), hi = fs.map(f => f.g.position.x + 4);
+      if (fs.length){ want = (Math.min(...lo) + Math.max(...hi)) / 2;
+        if (!view.user) wantD = Math.max(view.dist, (Math.max(...hi) - Math.min(...lo)) * 0.95 / Math.max(0.6, Math.min(1.6, lastW / Math.max(1, lastH))) + 16); }
+    }
+    const dt = prev ? Math.min(0.5, (now - prev) / 1000) : 0.016; prev = now; const k = 1 - Math.exp(-dt * 5);
+    view.tx += (want - view.tx) * k;
+    view.cd = view.cd == null || view.user ? wantD : view.cd + (wantD - view.cd) * k;
+    const D = view.mode === 'follow' ? view.cd : view.dist, ph = view.phi, th = view.theta;
+    cam.position.set(view.tx + D * Math.cos(ph) * Math.sin(th), view.ty + D * Math.sin(ph), view.tz + D * Math.cos(ph) * Math.cos(th));
+    cam.lookAt(view.tx, view.ty - 1.5, view.tz);
+    sun.position.set(view.tx - 35, 70, 45); sun.target.position.set(view.tx, 0, 0);
+    R.render(scene, cam);
+    raf = requestAnimationFrame(loop);
+  }
+  return { supported, active, sync, why:() => S3why };
+})();
+
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+<script type="text/babel" data-presets="env,react">
+const {useState,useEffect,useRef,useCallback}=React;
+
+/* ===== MODEL · End = Start + D · line (Start, 0 ft) → (End, 300 ft) ===== */
+const PJ=300;
+const CREWS=[
+  {k:'exc', ic:'🚜',tag:'Excavation', rate:30,cost:500,c:'var(--dig)'},
+  {k:'pipe',ic:'🏗️',tag:'Pipe laying',rate:25,cost:800,c:'var(--pipe)'},
+  {k:'back',ic:'🚛',tag:'Backfill',   rate:50,cost:300,c:'var(--fill)'}];
+const EQUIP={
+  exc: [{n:'Small',r:20,c:350},{n:'Standard',r:30,c:500},{n:'Heavy',r:45,c:750}],
+  pipe:[{n:'Small',r:15,c:520},{n:'Standard',r:25,c:800},{n:'Heavy',r:40,c:1150}],
+  back:[{n:'Small',r:35,c:220},{n:'Standard',r:50,c:300},{n:'Heavy',r:70,c:430}]};
+const durOf=r=>Math.ceil(PJ/r);
+const D=CREWS.map(c=>durOf(c.rate));
+const money=n=>'$'+Math.round(n).toLocaleString('en-US');
+function loaded(d){const ind=Math.round(d*0.30),pr=Math.round((d+ind)*0.05);return{direct:d,ind,pr,total:d+ind+pr}}
+const ftAt=(S,d,t)=>Math.max(0,Math.min(PJ,(t-S)/d*PJ));
+function clash(L,F){const sL=PJ/L.D,sF=PJ/F.D,LE=L.S+L.D;
+  if(F.S<L.S)return{t:F.S,ft:0};
+  if(sF>sL+1e-9){const t=(sF*F.S-sL*L.S)/(sF-sL);if(t<=LE+1e-9)return{t,ft:Math.min(PJ,sL*(t-L.S))};return null}
+  if(Math.abs(sF-sL)<1e-9&&F.S===L.S)return{t:L.S,ft:0};return null}
+const endOf=p=>p.S+p.D, projEnd=pl=>Math.max(...pl.map(endOf)), projDur=pl=>projEnd(pl)-Math.min(...pl.map(p=>p.S));
+const fmt=x=>Number.isInteger(x)?String(x):x.toFixed(1);
+const siteRun=(plan,t)=>({ft:plan.map(p=>ftAt(p.S,p.D,t)),st:plan.map(p=>t<p.S?'off':t>=endOf(p)?'done':'work')});
+const READY={ft:[0,0,0],st:['ready','ready','ready']};
+
+/* ===== SOUND ===== */
+const Snd={on:true,ctx:null,
+  beep(f,d,type,v){if(!this.on)return;try{this.ctx=this.ctx||new(window.AudioContext||window.webkitAudioContext)();
+    const o=this.ctx.createOscillator(),g=this.ctx.createGain(),t=this.ctx.currentTime;o.type=type||'square';o.frequency.value=f;
+    g.gain.setValueAtTime(v||.05,t);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g);g.connect(this.ctx.destination);o.start(t);o.stop(t+d)}catch(e){}},
+  ok(){this.beep(660,.12,'square',.04);setTimeout(()=>this.beep(990,.14,'square',.04),90)},
+  bad(){this.beep(150,.28,'sawtooth',.05)},
+  star(){[784,988,1319].forEach((f,i)=>setTimeout(()=>this.beep(f,.2,'triangle',.06),i*160))},
+  alarm(){[0,1,2,3].forEach(i=>setTimeout(()=>this.beep(i%2?440:330,.2,'square',.05),i*220))}};
+function confetti(){const cols=['#FFB703','#E63946','#2A9D8F','#1D6FB8','#264653'];
+  for(let i=0;i<70;i++){const d=document.createElement('div');d.className='conf';d.style.left=Math.random()*100+'vw';d.style.background=cols[i%5];d.style.animationDelay=Math.random()*.5+'s';document.body.appendChild(d);setTimeout(()=>d.remove(),2600)}}
+
+/* ===== STORAGE ===== */
+const SKEY='pipelineRush.v5',NM=10;
+const fresh=()=>({stars:Array(NM).fill(0),seenHelp:false});
+function loadProg(){try{const p=JSON.parse(localStorage.getItem(SKEY));if(p&&Array.isArray(p.stars)&&p.stars.length<=NM){while(p.stars.length<NM)p.stars.push(0);return p}}catch(e){}return null}
+function saveProg(p){try{localStorage.setItem(SKEY,JSON.stringify(p))}catch(e){}}
+
+/* ===== TRAININGS ===== */
+const TARGET={days:10,bid:25000};
+const STEPS=[
+  {n:1,name:'Sequence',
+   mission:'Drag each crew card onto a numbered row, or tap it. Row 1 is the first crew to work on the site.',
+   learn:'Why the order of pipeline work is fixed by the work itself.',
+   learned:'Linear work is a chain. Each crew can only work on ground the crew ahead has already finished — you can’t lay pipe in a trench that isn’t dug, or backfill pipe that isn’t there. Every pair of crews is a leader and a follower, and the follower must always stay behind.',
+   ins:'Each crew needs the work of the crew in front of it.'},
+  {n:2,name:'Bar chart',
+   mission:'For each crew: slide the days until the meter reaches 300 ft, drag the full bar onto its row, then finish the 🎯 mini-quest — drag the bar to its assigned start day.',
+   learn:'How a crew’s rate and daily cost become its duration and cost — and what a bar chart can and cannot show.',
+   learned:'A crew’s duration comes from how fast it moves, and its cost comes from how many days you pay for it. On a bar chart the crews overlap in time, so the project lasts from the first start to the last finish — not the sum of the bars. A bar chart tells you when each crew works, but nothing about where along the pipeline it is.',
+   ins:'A bar chart answers WHEN — never WHERE.'},
+  {n:3,name:'Find & fix the clash',
+   mission:'① Press ▶ on the 3D screen and watch the crews. ② Plot each crew as a line on the Line of Balance. ③ Drag Backfill later until its line no longer touches Pipe laying, then run it again.',
+   learn:'Why a clean bar chart can hide a collision, how a Line of Balance reveals it, and how a start day fixes it.',
+   learned:'When a faster crew follows a slower one, it keeps closing the gap until it runs into the crew ahead — the clash is in space, not time, so a bar chart can’t show it. A Line of Balance draws each crew as a line: time across, distance up. If a follower’s line touches its leader’s, two crews are on the same ground at the same time. You can’t always change a crew’s speed, but you can change when it starts: a faster follower is closest at the finish, so start it late enough that it finishes after its leader.',
+   ins:'A FAST crew behind a SLOW one — fixed by the start day, not the speed.'},
+  {n:4,name:'Buffer',
+   mission:'Drag Pipe laying and Backfill onto the dashed target lines so both gaps are 1 day, then press Run. Do the same with 5-day gaps, run it, and compare.',
+   learn:'What a buffer is, why it protects the schedule, and what it costs.',
+   learned:'Not crossing is not the same as being safe. A buffer is a planned gap between crews, so one bad day doesn’t turn into a collision. A bigger buffer makes the schedule safer but longer — the crews still do the same work, so they cost the same.',
+   ins:'Buffer trades time, not crew cost.'},
+  {n:5,name:'Equipment',
+   mission:'Crew by crew — Excavation, then Pipe laying, then Backfill: pick the type and number of machines, find the days to 300 ft and drag the bar onto its row, plot its line on the LOB, fix any conflict, then confirm.',
+   learn:'How equipment sets a crew’s rate, and why the rate is the slope of its line on the LOB.',
+   learned:'Equipment changes a crew’s speed, and speed is the slope of its line. A cheaper day rate doesn’t always mean a cheaper job: a faster machine can cost less overall because it works fewer days. A follower that is slower than its leader can never catch it; a faster follower has to start later.',
+   ins:'Rate is the slope — choose it, don’t just accept it.'},
+  {n:6,name:'Hit the target',
+   mission:'The client sets the limits: finish in ≤ '+TARGET.days+' days and keep the bid ≤ '+'$'+TARGET.bid.toLocaleString('en-US')+'. Build the schedule crew by crew like Training 5. You must meet both to clear.',
+   learn:'How to balance speed, cost and spacing to meet a real contract target.',
+   learned:'A deadline is not met just by buying the fastest machines. Faster crews cost more per day but work fewer days, and how close each crew can start behind the one ahead depends on their speeds. Every choice moves time and money together — planning means finding the mix that satisfies both.',
+   ins:'Speed, cost and spacing — balance all three.'},
+  {n:'2.1',stage:2,name:'Rock refusal',
+   mission:'Run your Training 6 plan. When the excavator hits rock, pick a response, then watch what it does to every crew. Finish within the budget; each day past the deadline costs $1,000.',
+   learn:'How a slowdown bends a crew’s line, and how a delay up front ripples to the crews behind it.',
+   learned:'A slowdown makes a crew’s line flatter for a few days. If the crew behind is faster, it catches up and has to wait — and you still pay it. Every response moves the cost somewhere: into days, into dollars, or into another crew’s schedule.',
+   ins:'No free fix — you only choose who pays.'},
+  {n:'2.2',stage:2,name:'Trench collapse',
+   mission:'Run the plan. When the trench collapses, Pipe laying stops. Choose how to get it moving again and finish within the budget.',
+   learn:'Why a stop in the middle crew is so expensive, and how buffer protects the crew behind.',
+   learned:'When a crew stops, its line goes flat but you keep paying it. The crew behind only stays clear because of the buffer you planned. Paying to fix the cause quickly is often cheaper than waiting it out.',
+   ins:'A stopped crew still costs money.'},
+  {n:'2.3',stage:2,name:'Poor compaction',
+   mission:'Run the plan. When a density test fails, Backfill slows down. Pick the cheapest way through and finish within the budget.',
+   learn:'How a delay at the last crew is different, and how to use a finished crew’s machines.',
+   learned:'The last crew has no one behind it, so its delay only moves the finish date. A crew that has already finished has machines standing idle — borrowing them is almost free.',
+   ins:'Look for idle resources before you buy new ones.'},
+  {n:'2.4',stage:2,name:'All three',
+   mission:'All three events hit one run. Respond to each as it happens and finish within the budget (it includes a $1,500 risk allowance).',
+   learn:'How choices add up when problems stack, and where spending saves the most.',
+   learned:'Disruptions stack. Cheap answers early leave money for the event that really needs paying for. Comparing planned and actual as you go shows where the schedule is slipping before it is too late.',
+   ins:'Spend where it saves the most.'}];
+
+
+/* ===== INFO BOXES · tap ⓘ to learn more (opens are counted for research) ===== */
+const INFO={
+  rate:{t:'Rate (ft/d)',w:'How many feet of pipeline a crew finishes in one day.',y:'A faster rate means fewer days. On the LOB, the rate is the slope of the crew’s line.',e:'30 ft/d → 300 ft in 10 days.'},
+  daily:{t:'Daily cost ($/d)',w:'What you pay a crew for every day it works — machines, operators, fuel.',y:'Crew cost = days × daily cost. A cheap day rate can still be an expensive job if it takes many days.'},
+  days:{t:'Duration (days)',w:'How many days a crew needs to finish the whole pipeline: length ÷ rate, rounded up.',y:'A part-day still has to be paid as a full day, so rounding up matters.',e:'300 ÷ 25 = 12 days.'},
+  startend:{t:'Start and End day',w:'End = Start + Days. Day 1 means the start of day 1.',y:'The start day is the main thing you control to keep crews apart without changing their speed.'},
+  bar:{t:'Bar chart',w:'Each bar shows WHEN a crew works, from its start day to its end day.',y:'It shows time only. It can’t show WHERE each crew is along the pipe, so it can hide a clash.'},
+  lob:{t:'Line of Balance (LOB)',w:'Time runs across, distance up. Each crew is a line from its start (0 ft) to its finish (300 ft).',y:'If two lines touch, two crews are at the same spot at the same time — a clash a bar chart can’t show.'},
+  slope:{t:'Slope = rate',w:'A steeper line is a faster crew; a flatter line is a slower crew.',y:'A steep follower closes the gap on a flat leader, so it has to start later. More or bigger machines make the line steeper.'},
+  conflict:{t:'Conflict (clash)',w:'A following crew catches the crew ahead of it — their lines touch on the LOB.',y:'On site the crews would block each other and work would stop. Fix it by starting the follower later.'},
+  buffer:{t:'Buffer',w:'A planned gap in time between a crew and the crew it follows.',y:'Real work is never perfectly on time. A buffer absorbs small delays so one bad day doesn’t cause a clash. It costs days, not crew money.'},
+  projdur:{t:'Project duration',w:'From the first crew’s start to the last crew’s finish.',y:'Crews overlap in time, so the project is shorter than the bars added together.'},
+  bid:{t:'Total project cost (bid)',w:'Direct = all crew costs. Indirect (30%) = site overhead: office, supervision, insurance. Profit (5%) = the contractor’s margin on direct + indirect.',y:'This total is the price the client compares. Keeping crews busy for fewer days lowers it.'},
+  equip:{t:'Machine size',w:'Small machines are slow and cheap, Heavy ones fast and costly. Mix up to 3 of each; their rates and daily costs add up.',y:'Machines set the rate — so they set the slope, the days and the cost all at once.'},
+  ripple:{t:'Ripple effect',w:'A delay in one crew spreads to the crews behind it: their lines run into it on the LOB.',y:'You must pause a crew that is working, or delay one that has not started. A paused or stopped crew is still paid, so one problem can cost you on several crews at once.'},
+  latefee:{t:'Late fee (liquidated damages)',w:'A charge written into the contract for each day the job finishes after the deadline — here $1,000 a day.',y:'It turns lost days into money, so you can compare “finish late” with “pay to stay on time”.'},
+  planvs:{t:'Planned vs actual',w:'Dashed lines are the plan. Solid lines are what has happened so far; the faded part is the forecast if nothing else goes wrong.',y:'The gap between plan and actual shows how reliable the schedule is and where it slipped.'},
+  target:{t:'Client target',w:'The latest finish and the highest price the client will accept.',y:'Real contracts have both. Faster usually costs more per day, so you must balance speed against cost.'}};
+const infoBus=new EventTarget();
+function logInfo(k){try{const K='pipelineRush.info',x=JSON.parse(localStorage.getItem(K)||'{}');x[k]=(x[k]||0)+1;localStorage.setItem(K,JSON.stringify(x))}catch(e){}
+  (window.__infoLog=window.__infoLog||[]).push({k,at:Date.now()});DL.info(k)}
+
+/* ===== DATA LOG · one row per level attempt → Google Sheet (Apps Script web app) =====
+   Set the web-app URL in index.html (window.RUSH_LOG_URL) or add ?log=<url> to the page link.
+   No URL → nothing is sent and no participant code is asked (demo mode). */
+const LVL_ID=['T1','T2','T3','T4','T5','T6','2.1','2.2','2.3','2.4'];
+const CK=['exc','pipe','back'];
+const DL={ver:'pipeline-rush 2026-10-28',
+  url:(()=>{let u='';try{u=new URLSearchParams(location.search).get('log')||''}catch(e){}u=u||window.RUSH_LOG_URL||'';return /^https:\/\//.test(u)?u:''})(),
+  pid:(()=>{try{const q=new URLSearchParams(location.search).get('pid');if(q)return q.trim()}catch(e){}try{return localStorage.getItem('pipelineRush.pid')||''}catch(e){return ''}})(),
+  sid:Date.now().toString(36)+Math.random().toString(36).slice(2,6),
+  cur:null,
+  _ls(k,d){try{const v=JSON.parse(localStorage.getItem(k));return v==null?d:v}catch(e){return d}},
+  _ss(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},
+  setPid(p){this.pid=p;try{localStorage.setItem('pipelineRush.pid',p)}catch(e){}},
+  secs(){return this.cur?Math.round((Date.now()-this.cur.t0)/100)/10:0},
+  begin(i){if(this.cur)this.end('quit');const lv=LVL_ID[i],T=this._ls('pipelineRush.tries',{}),key=this.pid+'|'+lv;T[key]=(T[key]||0)+1;this._ss('pipelineRush.tries',T);
+    this.cur={i,lv,attempt:T[key],t0:Date.now(),ev:[],n:{},sum:{},info:{},img:null};this.ev('start');return this.cur},
+  ev(type,data){const c=this.cur;if(c)c.ev.push({s:this.secs(),...(data||{}),type})},
+  inc(k,by){const c=this.cur;if(c)c.n[k]=(c.n[k]||0)+(by==null?1:by)},
+  set(o){const c=this.cur;if(c)Object.assign(c.sum,o)},
+  mark(name){this.set({['sec_'+name]:this.secs()})},
+  info(k){const c=this.cur;if(c){c.info[k]=(c.info[k]||0)+1;this.inc('info_opens');this.ev('info',{topic:k})}},
+  snap(img){if(this.cur)this.cur.img=img},
+  end(status,extra){const c=this.cur;if(!c)return null;this.ev('end',{status});this.cur=null;const now=Date.now();
+    const row={pid:this.pid||'(none)',session:this.sid,level:c.lv,attempt:c.attempt,status,start:new Date(c.t0).toISOString(),end:new Date(now).toISOString(),
+      seconds:Math.round((now-c.t0)/100)/10,mistakes:0,...c.n,...c.sum,...(extra||{}),
+      info_topics:Object.entries(c.info).map(([k,v])=>k+'×'+v).join(' '),screen:innerWidth+'x'+innerHeight,version:this.ver};
+    const pack={row,events:c.ev.map(e=>({pid:row.pid,session:row.session,level:row.level,attempt:row.attempt,...e})),image:c.img};
+    const bk=this._ls('pipelineRush.data',[]);bk.push({row,events:pack.events});this._ss('pipelineRush.data',bk.slice(-200));
+    (window.__dl=window.__dl||[]).push(pack);this.send(pack,status==='quit');return row},
+  send(pack,leaving){if(!this.url)return;let body=JSON.stringify(pack);
+    if(leaving&&body.length>60000){body=JSON.stringify({...pack,image:null})}
+    try{fetch(this.url,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body,keepalive:!!leaving}).catch(()=>{})}catch(e){}}
+};
+window.addEventListener('pagehide',()=>{if(DL.cur)DL.end('quit')});
+/* schedule → flat columns: exc_rate, exc_cost_per_day, exc_start, exc_end, exc_days, exc_cost … */
+function schedCols(rows){const o={};rows.forEach((r,i)=>{const k=CK[i];o[k+'_rate']=r.rate;o[k+'_cost_per_day']=r.dc;o[k+'_start']=r.S;o[k+'_end']=r.E;o[k+'_days']=r.E-r.S;o[k+'_cost']=Math.round((r.E-r.S)*r.dc);
+    if(r.wait!=null)o[k+'_stopped_days']=+r.wait.toFixed(1);if(r.fleet)o[k+'_machines']=r.fleet});return o}
+/* LOB + bar chart picture of what the player built (drawn from the data, so it matches the plan exactly) */
+function snapPNG({title,sub,tMax,deadline,crews,hits}){
+  const col=c=>{const m=/^var\((--[\w-]+)\)$/.exec(c||'');if(!m)return c;const v=getComputedStyle(document.documentElement).getPropertyValue(m[1]).trim();return v||'#555'};
+  crews=crews.map(c=>({...c,c:col(c.c)}));
+  try{const W=1000,H=780,cv=document.createElement('canvas');cv.width=W;cv.height=H;const g=cv.getContext('2d');
+    g.fillStyle='#fff';g.fillRect(0,0,W,H);g.fillStyle='#264653';g.font='bold 22px sans-serif';g.fillText(title,24,34);g.font='14px sans-serif';g.fillStyle='#555';g.fillText(sub||'',24,56);
+    const x0=150,x1=W-30,X=t=>x0+t/tMax*(x1-x0);
+    const grid=(yA,yB)=>{g.strokeStyle='#e6e1d6';g.lineWidth=1;for(let d=0;d<=tMax;d++){g.beginPath();g.moveTo(X(d),yA);g.lineTo(X(d),yB);g.stroke()}
+      g.fillStyle='#666';g.font='12px sans-serif';for(let d=0;d<=tMax;d+=tMax>24?4:2)g.fillText(String(d),X(d)-4,yB+16);
+      if(deadline!=null){g.strokeStyle='#E63946';g.setLineDash([6,4]);g.lineWidth=2;g.beginPath();g.moveTo(X(deadline),yA);g.lineTo(X(deadline),yB);g.stroke();g.setLineDash([])}};
+    /* bar chart */
+    const bA=80,rowH=46;g.fillStyle='#264653';g.font='bold 15px sans-serif';g.fillText('Bar chart',24,bA-6);grid(bA,bA+3*rowH);
+    crews.forEach((c,i)=>{const y=bA+i*rowH+8;g.fillStyle='#264653';g.font='bold 13px sans-serif';g.fillText(c.tag,24,y+20);
+      if(c.S==null)return;g.fillStyle=c.c;g.fillRect(X(c.S),y,X(c.E)-X(c.S),rowH-16);
+      (c.red||[]).forEach(s=>{g.fillStyle='rgba(0,0,0,.35)';g.fillRect(X(s.a),y,X(s.b)-X(s.a),rowH-16)});
+      g.fillStyle='#fff';g.font='bold 12px sans-serif';g.fillText('Day '+c.S+' → '+c.E,X(c.S)+6,y+19)});
+    g.fillStyle='#666';g.font='12px sans-serif';g.fillText('day',x1-20,bA+3*rowH+30);
+    /* LOB */
+    const lA=bA+3*rowH+70,lB=H-50,Y=ft=>lB-ft/PJ*(lB-lA);g.fillStyle='#264653';g.font='bold 15px sans-serif';g.fillText('Line of Balance',24,lA-10);grid(lA,lB);
+    g.strokeStyle='#e6e1d6';for(let f=0;f<=PJ;f+=75){g.beginPath();g.moveTo(x0,Y(f));g.lineTo(x1,Y(f));g.stroke();g.fillStyle='#666';g.fillText(f+' ft',x0-50,Y(f)+4)}
+    crews.forEach(c=>{const ln=(pts,dash,w)=>{if(!pts||!pts.length)return;g.strokeStyle=c.c;g.lineWidth=w;g.setLineDash(dash?[7,5]:[]);g.beginPath();pts.forEach(([t,x],k)=>k?g.lineTo(X(t),Y(x)):g.moveTo(X(t),Y(x)));g.stroke();g.setLineDash([])};
+      ln(c.plan,true,2);ln(c.pts,false,4)});
+    (hits||[]).forEach(h=>{g.strokeStyle='#E63946';g.lineWidth=3;g.beginPath();g.arc(X(h.t),Y(h.ft),9,0,7);g.stroke()});
+    let lx=x0;crews.forEach(c=>{g.fillStyle=c.c;g.fillRect(lx,H-24,14,10);g.fillStyle='#333';g.font='12px sans-serif';g.fillText(c.tag+(c.rate!=null?' · '+c.rate+' ft/d':''),lx+18,H-15);lx+=210});
+    if(crews.some(c=>c.plan)){g.fillStyle='#555';g.fillText('dashed = planned · solid = actual',x1-210,H-15)}
+    return cv.toDataURL('image/png')}catch(e){return null}}
+const planShot=(title,plan,rates,deadline)=>snapPNG({title,sub:'Participant '+(DL.pid||'—')+' · '+new Date().toLocaleString(),deadline,
+  tMax:Math.max(16,Math.ceil(Math.max(...plan.map(p=>p.S+p.D)))+2),
+  crews:CREWS.map((c,i)=>({tag:c.tag,c:c.c,rate:rates[i],S:plan[i].S,E:plan[i].S+plan[i].D,pts:[[plan[i].S,0],[plan[i].S+plan[i].D,PJ]]}))});
+function Info({k}){const d=INFO[k];const ref=useRef(null);const [pos,setPos]=useState(null);
+  useEffect(()=>{const h=e=>{if(e.detail!==ref.current)setPos(null)};infoBus.addEventListener('open',h);return()=>infoBus.removeEventListener('open',h)},[]);
+  useEffect(()=>{if(!pos)return;
+    const close=e=>{if(e.type==='keydown'&&e.key!=='Escape')return;const t=e.target;if(e.type==='pointerdown'&&t&&(ref.current.contains(t)||(t.closest&&t.closest('.infopop'))))return;setPos(null)};
+    const follow=()=>{const p=place();if(!p)setPos(null);else setPos(p)};
+    window.addEventListener('pointerdown',close,true);window.addEventListener('keydown',close);window.addEventListener('resize',follow);document.addEventListener('scroll',follow,true);
+    return()=>{window.removeEventListener('pointerdown',close,true);window.removeEventListener('keydown',close);window.removeEventListener('resize',follow);document.removeEventListener('scroll',follow,true)}},[!!pos]);
+  function place(){const el=ref.current;if(!el)return null;const r=el.getBoundingClientRect();if(r.bottom<0||r.top>innerHeight||(r.width===0&&r.height===0))return null;
+    const W=Math.min(300,innerWidth-16),x=Math.min(Math.max(8,r.left+r.width/2-W/2),innerWidth-W-8),below=r.bottom+230<innerHeight;
+    return{x,W,top:below?r.bottom+8:null,bot:below?null:innerHeight-r.top+8}}
+  const toggle=e=>{e.stopPropagation();e.preventDefault();if(pos){setPos(null);return}
+    const p=place();if(!p)return;setPos(p);infoBus.dispatchEvent(new CustomEvent('open',{detail:ref.current}));logInfo(k)};
+  return(<><button ref={ref} type="button" className="info" aria-label={'What is '+d.t+'?'} aria-expanded={!!pos} onPointerDown={e=>e.stopPropagation()} onClick={toggle}>i</button>
+    {pos&&ReactDOM.createPortal(<div className="infopop" role="dialog" aria-label={d.t} style={{left:pos.x,width:pos.W,top:pos.top==null?'auto':pos.top,bottom:pos.bot==null?'auto':pos.bot}}>
+      <b>{d.t}</b><p>{d.w}</p><p className="why"><span>Why it matters</span>{d.y}</p>{d.e&&<p className="ex">e.g. {d.e}</p>}</div>,document.body)}</>)}
+
+/* ===== SHARED UI ===== */
+function useClock(){
+  const [t,setT]=useState(0);const [run,setRun]=useState(false);const lim=useRef(0);const rate=useRef(1.4);
+  useEffect(()=>{if(!run)return;let raf,last=performance.now();
+    const step=now=>{const dt=Math.min(.1,(now-last)/1000);last=now;let stop=false;
+      setT(p=>{let n=p+dt*rate.current;if(n>=lim.current){n=lim.current;stop=true}return n});
+      if(stop)setRun(false);else raf=requestAnimationFrame(step)};
+    raf=requestAnimationFrame(step);return()=>cancelAnimationFrame(raf)},[run]);
+  return{t,run,rate,play(from,to){if(from!=null)setT(from);lim.current=to;setRun(true)},set:setT,stop(){setRun(false)}};
+}
+function Banner({m}){if(!m)return null;return(<div key={m.n||0} className={'banner '+m.k+(m.k==='bad'?' shake':'')} role="status">{m.t}</div>)}
+function Stats({items}){return(<div className="hud">{items.map((s,i)=>(<div key={i} className={'stat '+(s.k||'')}><small>{s.l}</small><span className="num">{s.v}</span></div>))}</div>)}
+function Legend(){return(<div className="legend">{CREWS.map(c=><span key={c.k}><i style={{background:c.c}}/>{c.ic} {c.tag}</span>)}</div>)}
+function Pills({items,cur}){return(<span className="pills">{items.map((x,i)=><span key={i} className={cur===i?'on':cur>i?'ok':''}>{cur>i?'✓ ':''}{x}</span>)}</span>)}
+
+/* pointer drag & drop */
+const DND={zones:new Map(),setGhost:null};
+function DropZone({id,onDrop,className,style,children}){useEffect(()=>{DND.zones.set(id,onDrop);return()=>{DND.zones.delete(id)}});return(<div data-drop={id} className={className} style={style}>{children}</div>)}
+function Draggable({payload,label,color,onTap,disabled,className,style,children,ariaLabel}){
+  const st=useRef(null);const end=()=>{st.current=null;DND.setGhost&&DND.setGhost(null)};
+  return(<div className={className} style={{...style,touchAction:disabled?'auto':'none',cursor:disabled?'default':'grab',userSelect:'none',WebkitUserSelect:'none'}} role="button" tabIndex={disabled?-1:0} aria-label={ariaLabel}
+    onPointerDown={e=>{if(disabled)return;e.preventDefault();st.current={x:e.clientX,y:e.clientY,drag:false};e.currentTarget.setPointerCapture(e.pointerId)}}
+    onPointerMove={e=>{const s=st.current;if(!s)return;if(!s.drag&&Math.hypot(e.clientX-s.x,e.clientY-s.y)>6)s.drag=true;
+      if(s.drag){DND.setGhost&&DND.setGhost({x:e.clientX,y:e.clientY,label,color})}}}
+    onPointerUp={e=>{const s=st.current;end();if(!s)return;if(!s.drag){onTap&&onTap();return}
+      const el=document.elementFromPoint(e.clientX,e.clientY);const z=el&&el.closest('[data-drop]');if(z){const h=DND.zones.get(z.getAttribute('data-drop'));h&&h(payload)}}}
+    onPointerCancel={end} onKeyDown={e=>{if(!disabled&&onTap&&(e.key==='Enter'||e.key===' ')){e.preventDefault();onTap()}}}>{children}</div>);
+}
+function Ghost(){const [g,setG]=useState(null);DND.setGhost=setG;return g?(<div className="dragghost" style={{left:g.x,top:g.y,background:g.color}}>{g.label}</div>):null}
+
+/* live 3D site card (right) with optional player bar and camera views */
+const CAMS=[['over','🎥 Overview'],[0,'🚜 Excavation'],[1,'🏗️ Pipe laying'],[2,'🚛 Backfill']];
+function Site({ft=[0,0,0],st=['off','off','off'],qty,focus=null,clock='',clash:cl=null,player=null,alert=null}){
+  const cv=useRef(null);const [cam,setCam]=useState(focus==null?'over':focus);const [,bump]=useState(0);
+  useEffect(()=>{window.__s3fail=()=>bump(x=>x+1);return()=>{window.__s3fail=null}},[]);
+  useEffect(()=>{if(focus!=null)setCam(focus)},[focus]);
+  useEffect(()=>{try{S3.sync(cv.current,{ft,st,qty,cam})}catch(e){console.warn(e)}});
+  const ok=S3.supported();
+  return(<div className="rcol"><div className="sitecard">
+    <div className="sitehd"><span className="ttl">🏗 3D site · 300 ft</span><span className="clock">{clock}</span></div>
+    <div className="sitewrap">
+      <div className="cv" ref={cv}/>
+      {!ok&&<div className="no3d"><div><b>The 3D site needs WebGL.</b><br/>{S3.why()||'WebGL is not available.'}<br/>In Chrome: Settings → System → “Use graphics acceleration when available”, then reload.</div></div>}
+      {ok&&<span className="v3hint">🖱 drag to orbit · scroll to zoom</span>}
+      {alert&&<div className="clashov evt"><div className="cbig">{alert.big}</div><div className="cmsg">{alert.msg}</div></div>}
+      {cl&&<div className="clashov"><div className="cbig">💥 COLLISION</div><div className="cmsg">{cl}</div></div>}
+      {player&&<div className="player">
+        {!player.run?<button className="pbtn" disabled={player.disabled} onClick={player.onPlay} aria-label="Play">▶</button>:<button className="pbtn" onClick={player.onPause} aria-label="Pause">⏸</button>}
+        <input aria-label="Progress" type="range" min={player.min} max={player.max} step="0.1" value={player.t} disabled={player.disabled} onChange={e=>player.onScrub(+e.target.value)}/>
+        <span className="pday num">Day {player.t.toFixed(1)}</span>
+        <span className="spdsw dark">{[.5,1,2,4].map(v=><button key={v} className={player.spd===v?'on':''} onClick={()=>player.setSpd(v)}>{v}×</button>)}</span>
+      </div>}
+    </div>
+    <div className="camsw" role="group" aria-label="Camera view">{CAMS.map(([k,l])=><button key={k} className={cam===k?'on':''} onClick={()=>setCam(k)}>{l}</button>)}</div>
+    <div className="crewchips">{CREWS.map((c,i)=>{const s=st[i];if(s==='off')return null;
+      return <span key={c.k} className={'cchip '+s}>{c.ic} {c.tag} · {Math.round(ft[i])} ft</span>})}</div>
+  </div></div>);
+}
+
+/* left column: compact mission + learn on top */
+const StepCtx=React.createContext(null);
+function Split({site,compact,noMission,children}){const S=React.useContext(StepCtx);
+  return(<div className="split"><div className="lcol">
+    {S&&!noMission&&<div className={'guide mission'+(compact?' compact':'')}><p><b>🎯 Mission</b> {S.mission}</p>{!compact&&<p className="lrn"><b>🎓 You will learn</b> {S.learn}</p>}</div>}
+    {children}
+  </div>{site}</div>)}
+
+/* LOB chart (fills the space it is given) */
+function svgPoint(svg,e){const p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;const m=svg.getScreenCTM();return m?p.matrixTransform(m.inverse()):null}
+function Lob({tMax=16,lines=[],points=[],ring=null,hit=null,cursor=null,onPick,drag=null,attempt=null,deadline=null,note=null,bands=null,paths=null,upto=null,hits=null}){
+  const ref=useRef(null),dr=useRef(null);
+  const W=360,L=40,R=14,T=14,B=30,ph=200,H=T+ph+B,pw=W-L-R;
+  const x=t=>L+t/tMax*pw,y=f=>T+ph-f/PJ*ph;
+  const tOf=e=>{const p=svgPoint(ref.current,e);return p?(p.x-L)/pw*tMax:null};
+  const click=e=>{if(!onPick||dr.current)return;const p=svgPoint(ref.current,e);if(!p)return;
+    const t=Math.round((p.x-L)/pw*tMax),f=Math.round(((T+ph-p.y)/ph*PJ)/25)*25;
+    if(t<0||t>tMax||f<0||f>PJ)return;onPick(t,f)};
+  const step=tMax<=18?2:4,xt=[],vg=[],hg=[];for(let t=0;t<=tMax;t+=step)xt.push(t);for(let t=0;t<=tMax;t++)vg.push(t);for(let f=0;f<=PJ;f+=25)hg.push(f);
+  return(<svg ref={ref} viewBox={`0 0 ${W} ${H}`} className={'lob'+(onPick?' pick':'')} data-tmax={tMax} onClick={click} role="img" aria-label="Line of Balance: days across, feet up"
+      onPointerMove={e=>{const d=dr.current;if(!d)return;const t=tOf(e);if(t==null)return;if(d.kind==='path'){let k=Math.round(t-d.t0);k=Math.max(d.min,Math.min(d.max,k));if(k!==d.last){d.last=k;d.fn(k)}return}let s=Math.round(d.S0+t-d.t0);s=Math.max(d.min,Math.min(d.max,s));if(s!==d.last){d.last=s;drag.onMove(d.i,s)}}}
+      onPointerUp={()=>{if(dr.current)setTimeout(()=>{dr.current=null},0)}}>
+    <rect className="plot" x={L} y={T} width={pw} height={ph} rx="6"/>
+    {vg.map(t=><line key={'v'+t} className={t%step===0?'g2':'g1'} x1={x(t)} x2={x(t)} y1={T} y2={T+ph}/>)}
+    {hg.map(f=><line key={'h'+f} className={f%75===0?'g2':'g1'} x1={L} x2={L+pw} y1={y(f)} y2={y(f)}/>)}
+    {[0,75,150,225,300].map(f=><text key={'y'+f} className="ax" x={L-5} y={y(f)+3.5} textAnchor="end">{f}</text>)}
+    {xt.map(t=><text key={'x'+t} className="ax" x={x(t)} y={T+ph+13} textAnchor="middle">{t}</text>)}
+    <text className="axt" x={L+pw} y={H-4} textAnchor="end">DAY →</text>
+    <text className="axt" x={L+4} y={T+10} textAnchor="start">FT ↑</text>
+    {bands&&bands.map((b,i)=><g key={'b'+i}><rect className="evband" x={x(b.a)} y={T} width={x(b.b)-x(b.a)} height={ph}/><text className="evlab" x={x(b.a)+3} y={T+10+i*11}>{b.label}</text></g>)}
+    {deadline!=null&&deadline<=tMax&&<g><line className="dline" x1={x(deadline)} x2={x(deadline)} y1={T} y2={T+ph}/><text className="dtxt" x={x(deadline)-3} y={T+ph-5} textAnchor="end">🎯 day {deadline}</text></g>}
+    {note&&<text className={'notetxt'+(note.bad?' bad':'')} x={L+pw-4} y={T+12} textAnchor="end">{note.t}</text>}
+    {lines.filter(l=>l.ghost).map((l,i)=>{const E=l.S+l.D;return(<g key={'g'+i}>
+      <line x1={x(l.S)} y1={y(0)} x2={x(E)} y2={y(PJ)} style={{stroke:l.c}} strokeWidth="9" strokeDasharray="6 6" opacity=".28" strokeLinecap="round"/>
+      <text className="ghostlab" x={(x(l.S)+x(E))/2+9} y={y(PJ/2)+4} style={{fill:l.c}}>◀ day {l.S}</text></g>)})}
+    {lines.map((l,i)=>{if(l.ghost)return null;const E=l.S+l.D,can=drag&&drag.idx.includes(i);return(<g key={'l'+i}>
+      <line x1={x(l.S)} y1={y(0)} x2={x(E)} y2={y(PJ)} style={{stroke:l.c}} strokeWidth={l.dash?1.6:3.2} strokeDasharray={l.dash?'4 4':undefined} opacity={l.dash?.5:1} strokeLinecap="round"/>
+      {!l.dash&&<circle cx={x(l.S)} cy={y(0)} r="3.8" style={{fill:l.c}}/>}
+      {!l.dash&&<circle cx={x(E)} cy={y(PJ)} r="3.8" style={{fill:l.c}}/>}
+      {l.lab&&(()=>{const f=l.labFr||.5;return <text className="slab" x={x(l.S+(E-l.S)*f)-6} y={y(PJ*f)-4} textAnchor="end" style={{fill:l.c}}>{l.lab}</text>})()}
+      {can&&<line className="grab" x1={x(l.S)} y1={y(0)} x2={x(E)} y2={y(PJ)} style={{stroke:'transparent',pointerEvents:'stroke'}} strokeWidth="20" fill="none"
+        onPointerDown={e=>{e.stopPropagation();ref.current.setPointerCapture(e.pointerId);const lim=drag.lim[drag.idx.indexOf(i)];dr.current={i,S0:l.S,t0:tOf(e),min:lim[0],max:lim[1],last:l.S}}}/>}
+      {can&&<text className="grabhint" x={x(E)+3} y={y(PJ)+12} style={{fill:l.c}}>↔</text>}
+    </g>)})}
+    {paths&&paths.map((p,i)=>{const P=q=>x(q.t)+','+y(q.x);const done=upto==null?p.pts:p.pts.filter(q=>q.t<=upto+1e-9);const fut=upto==null?[]:p.pts.filter(q=>q.t>=upto-1e-9);
+      if(upto!=null&&done.length&&upto<p.pts[p.pts.length-1].t-1e-9){const m=posAt(p.pts,upto);done.push({t:upto,x:m.x,w:m.w});fut.unshift({t:upto,x:m.x,w:m.w})}
+      const segs=[];let cur=[];p.pts.forEach((q,k)=>{if(q.w){if(!cur.length&&k>0)cur.push(p.pts[k-1]);cur.push(q)}else if(cur.length){segs.push(cur);cur=[]}});if(cur.length)segs.push(cur);
+      const last=done[done.length-1];
+      return(<g key={'pa'+i}>
+        {fut.length>1&&<polyline points={fut.map(P).join(' ')} fill="none" style={{stroke:p.c}} strokeWidth="2.8" opacity=".5" strokeDasharray="7 4" strokeLinejoin="round"/>}
+        {done.length>1&&<polyline points={done.map(P).join(' ')} fill="none" style={{stroke:p.c}} strokeWidth="3.2" strokeLinejoin="round"/>}
+        {segs.map((sg,k)=><polyline key={k} className="waitseg" points={sg.map(P).join(' ')}/>)}
+        {last&&done.length>1&&<circle cx={x(last.t)} cy={y(last.x)} r="4.2" style={{fill:p.c,stroke:'var(--card)'}} strokeWidth="1.5"/>}
+        {p.drag&&<polyline className="grab" points={(fut.length>1?fut:p.pts).map(P).join(' ')} fill="none" style={{stroke:'transparent',pointerEvents:'stroke'}} strokeWidth="22"
+          onPointerDown={ev=>{ev.stopPropagation();ref.current.setPointerCapture(ev.pointerId);dr.current={kind:'path',t0:tOf(ev),last:0,min:p.drag.min,max:p.drag.max,fn:p.drag.onMove}}}/>}
+        {p.drag&&(()=>{const e2=p.pts[p.pts.length-1];return <text className="grabhint" x={x(e2.t)+4} y={y(e2.x)+14} style={{fill:p.c}}>↔</text>})()}
+      </g>)})}
+    {points.map((p,i)=><circle key={'p'+i} className="pt" cx={x(p.t)} cy={y(p.ft)} r="5" style={{fill:p.c}}/>)}
+    {attempt&&<circle cx={x(attempt.t)} cy={y(attempt.ft)} r="7" style={{fill:'none',stroke:attempt.lvl==='amber'?'var(--amber)':'var(--bad)'}} strokeWidth="2.6"/>}
+    {ring&&<g><circle className="ring" cx={x(ring.t)} cy={y(ring.ft)} r="8"/>
+      <text className="ringlab" x={x(ring.t)+(ring.t>tMax-4?-11:11)} y={y(ring.ft)+(ring.ft>=PJ?15:-9)} textAnchor={ring.t>tMax-4?'end':'start'}>day {ring.t}, {ring.ft} ft</text></g>}
+    {cursor!=null&&<g><line className="cur" x1={x(cursor)} x2={x(cursor)} y1={T} y2={T+ph}/>
+      {lines.filter(l=>!l.dash&&!l.ghost&&cursor>=l.S).map((l,i)=><circle key={'c'+i} cx={x(cursor)} cy={y(ftAt(l.S,l.D,cursor))} r="4.5" style={{fill:l.c,stroke:'var(--card)'}} strokeWidth="1.5"/>)}</g>}
+    {hits&&hits.map((h,i)=><g key={'hh'+i}><circle className="hit" cx={x(h.t)} cy={y(h.ft)} r="10"/>
+      <text className="hitlab" x={x(h.t)+(h.t>tMax-6?-14:14)} y={y(h.ft)+(h.ft>250?18:-12)} textAnchor={h.t>tMax-6?'end':'start'}>💥 {Math.round(h.ft)} ft · day {fmt(+h.t.toFixed(1))}</text></g>)}
+    {hit&&<g><circle className="hit" cx={x(hit.t)} cy={y(hit.ft)} r="10"/>
+      <text className="hitlab" x={x(hit.t)+(hit.t>tMax-6?-14:14)} y={y(hit.ft)+(hit.ft>250?18:-12)} textAnchor={hit.t>tMax-6?'end':'start'}>💥 {Math.round(hit.ft)} ft · day {fmt(hit.t)}</text></g>}
+  </svg>);
+}
+
+/* timeline (bar chart) */
+function Timeline({tMax,rows,onDropRow,onSlide,narrow,deadline}){
+  const ticks=[];for(let t=0;t<=tMax;t+=2)ticks.push(t);
+  return(<div className={'tl'+(narrow?' narrow':'')}>
+    {rows.map((r,i)=>(<div key={i} className="tl-row">
+      <div className="tl-lab" style={{color:r.c}} title={r.tag}>{r.ic}{narrow?'':' '+r.tag}</div>
+      <DropZone id={'row'+i} onDrop={ci=>onDropRow&&onDropRow(i,ci)} className={'track'+(r.hot?' hot':'')} style={{'--tmax':tMax}}>
+        {deadline!=null&&<div className="dl" style={{left:(deadline/tMax*100)+'%'}}/>}
+        {r.flag!=null&&!r.locked&&<div className="flag" style={{left:(r.flag/tMax*100)+'%'}}><span>🎯 Day {r.flag}</span></div>}
+        {r.placed&&<SlideBar r={r} tMax={tMax} onSlide={s=>onSlide&&onSlide(i,s)}/>}
+        {!r.placed&&r.hot&&<span className="dropme">⬇ drop the bar here</span>}
+      </DropZone>
+      <div className={'tl-st '+(r.locked?'ok':'')}>{r.st}</div>
+    </div>))}
+    <div className="tl-axis"><div/><div className="ax">{ticks.map(t=><span key={t} style={{left:(t/tMax*100)+'%'}}>{t}</span>)}{deadline!=null&&<b className="dlab" style={{left:(deadline/tMax*100)+'%'}}>🎯 day {deadline}</b>}</div><div className="tl-st">{narrow?'':'day'}</div></div>
+  </div>);
+}
+function SlideBar({r,tMax,onSlide}){
+  const g=useRef(null);const tAt=e=>{const b=e.currentTarget.parentElement.getBoundingClientRect();return(e.clientX-b.left)/b.width*tMax};
+  const can=r.canSlide,fp=r.fill!=null?Math.max(0,Math.min(1,r.fill))*100:null,mn=r.min||0;
+  return(<div className={'bar'+(can?' slide':'')+(r.locked?' locked':'')} style={{left:(r.S/tMax*100)+'%',width:(r.D/tMax*100)+'%',background:r.c}}
+    onPointerDown={can?e=>{e.currentTarget.setPointerCapture(e.pointerId);g.current=tAt(e)-r.S}:undefined}
+    onPointerMove={can?e=>{if(g.current==null)return;const s=Math.max(mn,Math.min(tMax-r.D,Math.round(tAt(e)-g.current)));if(s!==r.S)onSlide(s)}:undefined}
+    onPointerUp={()=>{g.current=null}} onPointerCancel={()=>{g.current=null}}
+    tabIndex={can?0:-1} onKeyDown={can?e=>{if(e.key==='ArrowRight')onSlide(Math.min(tMax-r.D,r.S+1));if(e.key==='ArrowLeft')onSlide(Math.max(mn,r.S-1))}:undefined}
+    aria-label={r.tag+' bar, day '+r.S+' to '+(r.S+r.D)}>
+    {fp!=null&&<span className="fp" style={{width:fp+'%'}}/>}<span style={{position:'relative'}}>{can?'↔ ':''}{r.S} → {r.S+r.D}</span></div>);
+}
+
+/* measure card: slide to 300 ft, the full bar becomes draggable */
+function Measure({i,rate,cost,g,setG,onTapBar,bare}){
+  const c=CREWS[i],d=durOf(rate),ft=g*rate,ok=g===d,over=g>d,pct=Math.min(100,ft/PJ*100);
+  return(<div className={bare?'':'dock'}>
+    <div className="mhd"><span className="ico">{c.ic}</span><span style={{color:c.c}}>{c.tag}</span>
+      <span className="chip"><small>Rate</small> {rate} ft/d</span><Info k="rate"/><span className="chip"><small>Daily cost</small> {money(cost)}/d</span><Info k="daily"/>
+      {!bare&&<span className="unitnote">ft/d = feet built per day · $/d = paid per working day</span>}</div>
+    {ok?<Draggable payload={i} label={c.ic+' '+d+' days'} color={c.c} onTap={onTapBar} className="pb full" ariaLabel={'Drag the '+d+'-day bar to row '+(i+1)}>
+         <i style={{width:'100%',background:c.c}}/><span>☰ {d} days · {money(d*cost)} · drag to row {i+1} ⬆</span></Draggable>
+       :<div className="pb"><i style={{width:pct+'%',background:over?'var(--bad)':c.c}}/><span>{over?'OVERSHOT — slide back':Math.min(ft,PJ)+' / 300 ft'}</span></div>}
+    <div className="mrow"><input aria-label="Days" type="range" min="0" max="25" value={g} onChange={e=>setG(+e.target.value)}/>
+      <span className="big num">{g} days × {rate} ft/d = <b>{ft} ft</b></span></div>
+  </div>);
+}
+
+/* plotting helper */
+function usePlot(TP,miss){
+  const [k,setK]=useState(0);const [m,setM]=useState(null);const [att,setAtt]=useState(null);const n=useRef(0);
+  function pick(t,f){if(k>=TP.length)return;const g=TP[k];n.current++;
+    if(t===g.t&&f===g.ft){setK(k+1);setAtt(null);setM({k:'good',t:'✓ '+CREWS[g.ci].tag+' '+(k%2?'END':'START')+' · day '+g.t+', '+g.ft+' ft',n:n.current});Snd.ok();return}
+    const near=Math.abs(t-g.t)<=1&&Math.abs(f-g.ft)<=25;setAtt({t,ft:f,lvl:near?'amber':'red'});miss();
+    setM({k:near?'amber':'bad',t:(near?'≈ Close — tap the ring exactly':'✗ Tap the yellow ring'),n:n.current})}
+  return{k,m,att,pick,reset(){setK(0);setM(null);setAtt(null)}};
+}
+const plotLines=(plan,TP,k)=>{const lines=[],pts=[];for(let i=0;i<3;i++){if(k>=i*2+2)lines.push({...plan[i],c:CREWS[i].c});else if(k>=i*2+1)pts.push({t:TP[i*2].t,ft:0,c:CREWS[i].c})}return{lines,pts}};
+const targets=plan=>{const TP=[];plan.forEach((p,i)=>{TP.push({ci:i,t:p.S,ft:0});TP.push({ci:i,t:endOf(p),ft:300})});return TP};
+
+/* schedule & budget table (as in the original T1) */
+function Budget({rows,plan,done,compact,title}){
+  const direct=rows.reduce((a,r)=>a+r.D*r.c,0),b=loaded(direct);
+  return(<div className="dock"><div className="bhd">{title||'📋 Schedule & budget'}</div><div className="tbl-wrap"><table className="tbl">
+    <thead><tr><th>Activity</th><th className="r">Rate<Info k="rate"/></th><th className="r">Daily cost<Info k="daily"/></th><th className="r">Start</th><th className="r">End<Info k="startend"/></th><th className="r">Days<Info k="days"/></th><th className="r">Cost</th></tr></thead>
+    <tbody>{rows.map((r,i)=>r.show?<tr key={i}><td style={{color:CREWS[i].c,fontWeight:900}}>{CREWS[i].ic} {CREWS[i].tag}</td><td className="r">{r.r} ft/d</td><td className="r">{money(r.c)}/d</td>
+        <td className="r">Day {r.S}</td><td className="r">Day {r.S+r.D}</td><td className="r">{r.D}</td><td className="r">{money(r.D*r.c)}</td></tr>:null)}
+      {done&&<><tr className="tot"><td colSpan="5">Project duration<Info k="projdur"/> (Day {Math.min(...plan.map(p=>p.S))} → Day {projEnd(plan)})</td><td className="r">{projDur(plan)}</td><td/></tr>
+        {compact?<tr><td colSpan="7">Direct {money(b.direct)} · Indirect (30%) {money(b.ind)} · Profit (5%) {money(b.pr)}</td></tr>:<>
+        <tr><td colSpan="6">Direct cost</td><td className="r">{money(b.direct)}</td></tr>
+        <tr><td colSpan="6">Indirect cost (30%)</td><td className="r">{money(b.ind)}</td></tr>
+        <tr><td colSpan="6">Profit (5%)</td><td className="r">{money(b.pr)}</td></tr></>}
+        <tr className="grand"><td colSpan="6">Total project cost<Info k="bid"/></td><td className="r">{money(b.total)}</td></tr></>}
+    </tbody></table></div></div>);
+}
+
+/* ===== TRAINING 1 · SEQUENCE ===== */
+function M1({miss,done}){
+  const [rows,setRows]=useState([null,null,null]);const [m,setM]=useState(null);const [focus,setFocus]=useState(null);const n=useRef(0);const wrong=useRef([]);
+  const why=ci=>ci===2?'✗ No pipe to backfill yet.':ci===1?'✗ No trench to lay pipe in yet.':'✗ Not yet.';
+  function place(ci,row){if(rows.includes(ci))return;if(row==null)row=rows.indexOf(null);if(row<0||rows[row]!=null)return;n.current++;
+    if(ci===row){const r=rows.slice();r[row]=ci;setRows(r);setM(null);setFocus(ci);DL.ev('placed',{crew:CREWS[ci].tag,slot:row+1});Snd.ok()}
+    else{wrong.current.push(CREWS[ci].tag+'→slot '+(row+1));DL.ev('wrong_order',{crew:CREWS[ci].tag,slot:row+1});miss();setM({k:'bad',t:why(ci),n:n.current})}}
+  const full=rows.every(r=>r!=null);
+  return(<Split site={<Site ft={[0,0,0]} st={[0,1,2].map(i=>rows.includes(i)?'ready':'off')} focus={focus}/>}>
+    <div className="board">
+      <div className="tray">{[2,1,0].map(ci=>{const c=CREWS[ci],used=rows.includes(ci);return(
+        <Draggable key={c.k} payload={ci} label={c.ic+' '+c.tag} color={c.c} disabled={used} onTap={()=>place(ci,null)} className={'tile'+(used?' used':'')} style={{'--tc':c.c}} ariaLabel={c.tag}>
+          <span className="ico">{c.ic}</span><b style={{color:c.c}}>{c.tag}</b><small>Rate {c.rate} ft/d</small><small>Daily cost {money(c.cost)}/d</small></Draggable>)})}</div>
+      <div className="unitnote">ft/d = rate, feet built per day<Info k="rate"/> · $/d = daily cost, paid for every working day<Info k="daily"/></div>
+      <div className="slots">{[0,1,2].map(i=>{const ci=rows[i],c=ci!=null?CREWS[ci]:null;return(
+        <DropZone key={i} id={'seq'+i} onDrop={x=>place(x,i)} className={'slot'+(c?' filled':'')} style={c?{'--tc':c.c}:undefined}>
+          <span className="n">{i+1}</span>{c?<><span className="ico">{c.ic}</span><span style={{color:c.c}}>{c.tag}</span></>:<span className="hintx">{i===0?'first crew on site':'drop a crew here'}</span>}</DropZone>)})}</div>
+    </div>
+    <Banner m={m}/>
+    {full&&<div className="banner good">✓ Excavation → Pipe laying → Backfill<span className="sp"/><button className="go" onClick={()=>{DL.set({wrong_moves:wrong.current.join('; ')});done()}}>Finish ▶</button></div>}
+  </Split>);
+}
+
+/* ===== TRAINING 2 · BAR CHART + MINI-QUEST + SCHEDULE & BUDGET ===== */
+function M2({miss,done}){
+  const TG=[1,1,6];
+  const [g,setG]=useState([0,0,0]);const [placed,setPlaced]=useState([false,false,false]);const [S,setS]=useState([0,0,0]);const [m,setM]=useState(null);const n=useRef(0);
+  const locked=S.map((s,i)=>placed[i]&&s===TG[i]),active=locked.indexOf(false),all=active<0;
+  function dropRow(row,ci){if(ci!==active||g[ci]!==D[ci]||placed[ci])return;n.current++;
+    if(row!==ci){DL.ev('wrong_row',{crew:CREWS[ci].tag,row:row+1});miss();setM({k:'bad',t:'✗ '+CREWS[ci].tag+' belongs in row '+(ci+1),n:n.current});return}
+    const p=placed.slice();p[ci]=true;setPlaced(p);setM(null);DL.ev('bar_placed',{crew:CREWS[ci].tag});Snd.ok()}
+  function slide(i,s){if(locked[i])return;if(s!==S[i])DL.inc('bar_moves');const x=S.slice();x[i]=s;setS(x);if(s===TG[i])Snd.ok()}
+  const plan=CREWS.map((c,i)=>({S:S[i],D:D[i]}));
+  const ft=CREWS.map((c,i)=>i===active?Math.min(PJ,g[i]*c.rate):(all||i<active)?PJ:0);
+  return(<Split compact={all} site={<Site ft={ft} st={CREWS.map((c,i)=>all||i<active?'done':i===active?(g[i]>0?'work':'ready'):'off')} focus={all?null:active} clock={all?'':'Day '+g[active]}/>}>
+    {!all&&<div className="quest"><span className="qhd">🎯 MINI-QUEST <span className="qn">{locked.filter(Boolean).length}/3</span></span>
+      <span className="qtxt">Drag each bar to its assigned start day:</span>
+      {CREWS.map((c,i)=><span key={c.k} className={'qchip'+(locked[i]?' ok':i===active&&placed[i]?' now':'')}>{locked[i]?'✓':'🎯'} {c.tag} → Day {TG[i]}</span>)}</div>}
+    <div className="board"><div className="bhd">📊 Bar chart<Info k="bar"/></div>
+      <Timeline tMax={16} onDropRow={dropRow} onSlide={slide} rows={CREWS.map((c,i)=>({...c,placed:placed[i],S:S[i],D:D[i],locked:locked[i],canSlide:placed[i]&&!locked[i],
+        hot:i===active&&g[i]===D[i]&&!placed[i],flag:TG[i],st:locked[i]?'✓':''}))}/></div>
+    {!all&&placed[active]&&<div className="banner amber">↔ Drag the {CREWS[active].tag} bar to 🎯 Day {TG[active]}</div>}
+    {!all&&!placed[active]&&<Measure i={active} rate={CREWS[active].rate} cost={CREWS[active].cost} g={g[active]} setG={v=>{const x=g.slice();x[active]=v;setG(x)}} onTapBar={()=>dropRow(active,active)}/>}
+    <Banner m={m}/>
+    {locked.some(Boolean)&&<Budget plan={plan} done={all} rows={CREWS.map((c,i)=>({show:locked[i],r:c.rate,c:c.cost,S:S[i],D:D[i]}))}/>}
+    {all&&<div className="banner good">✓ Quest complete<span className="sp"/><button className="go" onClick={()=>{DL.set({...schedCols(CREWS.map((c,i)=>({rate:c.rate,dc:c.cost,S:S[i],E:S[i]+D[i]}))),duration:projDur(plan)});done()}}>Finish ▶</button></div>}
+  </Split>);
+}
+
+/* ===== TRAINING 3 · RUN → PLOT → FIX ===== */
+function M3({miss,done}){
+  const [ph,setPh]=useState(0);
+  const base=[{S:1,D:10},{S:1,D:12},{S:6,D:6}],STOP=11;
+  const clk=useClock();const [spd,setSpd]=useState(1);const [boom,setBoom]=useState(false);
+  useEffect(()=>{clk.set(1)},[]);
+  const TP=targets(base),P=usePlot(TP,miss),k=P.k;
+  const [bS,setBS]=useState(6);const fclk=useClock();const [running,setRunning]=useState(false);const [ran,setRan]=useState(false);
+  clk.rate.current=1.2*spd;fclk.rate.current=2.4;
+  const t=clk.t;
+  useEffect(()=>{if(ph===0&&!boom&&t>=STOP-1e-6){setBoom(true);clk.stop();Snd.alarm()}},[t]);
+  useEffect(()=>{if(ph===1&&k===6)Snd.alarm()},[k]);
+  const fix=[{S:1,D:10},{S:1,D:12},{S:bS,D:6}],fc=clash(fix[1],fix[2]),clear=!fc;
+  useEffect(()=>{if(running&&!fclk.run&&fclk.t>=projEnd(fix)-1e-6){setRunning(false);setRan(true);Snd.ok()}},[fclk.run,fclk.t]);
+  const s0=siteRun(base,t),pf=s0.ft[1],bf=s0.ft[2],gap=t>=6?pf-bf:null;
+  const {lines,pts}=plotLines(base,TP,k),q=k<6?TP[k]:null;
+  let site;
+  if(ph===0)site=<Site ft={s0.ft} st={s0.st} clock={'Day '+t.toFixed(1)} clash={boom?'Day 11 · 250 ft':null}
+    player={{t,min:1,max:STOP,run:clk.run,disabled:boom,spd,setSpd,onPlay:()=>clk.play(t,STOP),onPause:()=>clk.stop(),onScrub:v=>{clk.stop();clk.set(v)}}}/>;
+  else if(ph===1){const s=k>=6?siteRun(base,11):READY;site=<Site ft={s.ft} st={s.st} clock={k>=6?'Day 11':''}/>}
+  else{const tt=running||ran?fclk.t:0,s=running||ran?siteRun(fix,tt):READY;site=<Site ft={s.ft} st={s.st} clock={running||ran?'Day '+tt.toFixed(1):''}/>}
+  return(<Split site={site}>
+    <div className="row l"><Pills cur={ph} items={['① Run','② Plot the LOB','③ Fix']}/></div>
+    {ph===0&&<>
+      <div className="board"><div className="bhd">📊 Bar chart · looks clean<Info k="bar"/><span className="sp"/><span className="chip y">▶ Press play on the 3D screen →</span></div>
+        <Timeline tMax={16} rows={CREWS.map((c,i)=>({...c,placed:true,S:base[i].S,D:base[i].D,fill:(t-base[i].S)/base[i].D,st:t>=endOf(base[i])?'✓':''}))}/>
+        <Stats items={[{l:'🏗️ Pipe laying',v:Math.round(pf)+' ft'},{l:'🚛 Backfill',v:t>=6?Math.round(bf)+' ft':'—'},{l:'Gap',v:gap==null?'—':Math.max(0,Math.round(gap))+' ft',k:gap!=null&&gap<=50?'warn':''}]}/></div>
+      {boom&&<div className="banner bad">💥 Backfill caught Pipe laying · day 11 · 250 ft<span className="sp"/><button className="go" onClick={()=>{DL.mark('run');setPh(1)}}>② Find it on the LOB ▶</button></div>}
+    </>}
+    {ph===1&&<>
+      <div className="board grow"><div className="bhd">📈 Line of Balance<Info k="lob"/><span className="sp"/>{q&&<span className="chip y">👆 {CREWS[q.ci].tag} {k%2?'END':'START'} · {k+1}/6</span>}</div>
+        <div className="minitable">{CREWS.map((c,i)=><span key={c.k} style={{color:c.c}}>{c.ic} {c.tag}: day {base[i].S} → day {endOf(base[i])}</span>)}</div>
+        <Lob tMax={16} lines={lines} points={pts} ring={q?{t:q.t,ft:q.ft}:null} attempt={P.att} hit={k>=6?{t:11,ft:250}:null} onPick={k<6?P.pick:undefined}/>
+        <Legend/></div>
+      {k<6&&<Banner m={P.m}/>}
+      {k>=6&&<div className="banner bad">💥 Backfill crosses Pipe laying · 250 ft · day 11<span className="sp"/><button className="go" onClick={()=>{DL.mark('plot');setPh(2)}}>③ Fix it ▶</button></div>}
+    </>}
+    {ph===2&&<>
+      <div className="board grow"><div className="bhd">📈 Drag the 🚛 Backfill line ↔<span className="sp"/><span className={'chip '+(clear?'ok':'no')}>{clear?'✓ LINES CLEAR':'⚠ LINES TOUCH'}</span><Info k="conflict"/></div>
+        <Lob tMax={18} lines={fix.map((p,i)=>({...p,c:CREWS[i].c}))} hit={fc?{t:fc.t,ft:fc.ft}:null} cursor={running||ran?fclk.t:null}
+          drag={running?null:{idx:[2],lim:[[1,12]],onMove:(i,v)=>{if(v!==bS){DL.inc('backfill_moves');DL.ev('move',{crew:'Backfill',start:v,clash:!!clash(fix[1],{S:v,D:6})})}setBS(v);setRan(false)}}}/>
+        <Stats items={[{l:'🚛 Backfill start',v:'Day '+bS},{l:'Project',v:projDur(fix)+' days'},{l:'Crew cost',v:'$16,400'}]}/></div>
+      {!clear&&<div className="banner bad">⚠ {fc.ft>=PJ-1e-6?'Same spot at 300 ft on day '+fmt(fc.t):'Lines cross at '+Math.round(fc.ft)+' ft on day '+fmt(fc.t)} — drag Backfill later</div>}
+      {clear&&!ran&&<div className="banner good">✓ Backfill day {bS} → {bS+6}<span className="sp"/><button className="go" disabled={running} onClick={()=>{DL.inc('runs');DL.ev('run',{backfill_start:bS});setRunning(true);fclk.play(0,projEnd(fix))}}>▶ Run again</button></div>}
+      {clear&&ran&&<div className="banner good">✓ No collision · {projDur(fix)} days<span className="sp"/><button className="go" onClick={()=>{DL.mark('fix');DL.set({...schedCols(CREWS.map((c,i)=>({rate:c.rate,dc:c.cost,S:fix[i].S,E:fix[i].S+fix[i].D}))),duration:projDur(fix),direct:16400,total:loaded(16400).total});
+        DL.snap(planShot('Training 3 · Final schedule',fix,CREWS.map(c=>c.rate)));done()}}>Finish ▶</button></div>}
+      <Budget title={clear?'📋 Final schedule':'📋 Final schedule · fix the clash first'} done={true} plan={fix} rows={CREWS.map((c,i)=>({r:c.rate,c:c.cost,S:fix[i].S,D:fix[i].D,show:true}))}/>
+    </>}
+  </Split>);
+}
+
+/* ===== TRAINING 4 · BUFFER (1 day, 5 days) ===== */
+function M4({done}){
+  const BUF=[1,5];const [stp,setStp]=useState(0);const [pS,setPS]=useState(1);const [bS,setBS]=useState(8);const clk=useClock();const [running,setRunning]=useState(false);const [res,setRes]=useState([]);
+  clk.rate.current=4;
+  const b=BUF[stp],tP=1+b,tB=2*b+7;
+  const plan=[{S:1,D:10},{S:pS,D:12},{S:bS,D:6}],gs=pS-1,ge=endOf(plan[2])-endOf(plan[1]),onT=pS===tP&&bS===tB,cur=res[stp],both=res[0]&&res[1];
+  useEffect(()=>{if(running&&!clk.run&&clk.t>=projEnd(plan)-1e-6){setRunning(false);const r=res.slice();r[stp]={P:pS,B:bS,end:projEnd(plan),dur:projDur(plan)};setRes(r);DL.mark('buffer'+b);DL.ev('buffer_run',{buffer_days:b,pipe_start:pS,backfill_start:bS,days:projDur(plan)});Snd.ok()}},[clk.run,clk.t]);
+  const live=running||cur,tt=live?clk.t:0,s=live?siteRun(plan,tt):READY;
+  const ghosts=onT||cur?[]:[{S:tP,D:12,c:CREWS[1].c,ghost:true},{S:tB,D:6,c:CREWS[2].c,ghost:true}];
+  return(<Split compact={both} site={<Site ft={s.ft} st={s.st} clock={live?'Day '+tt.toFixed(1):''}/>}>
+    {!both&&<div className="guide define"><p><b>🛡 Buffer</b> = a planned gap in time between a crew and the crew it follows. <b>Why it matters:</b> real work is never perfectly on time — rain, a breakdown, a late delivery. A buffer lets the follower absorb a delay without running into the crew ahead.</p></div>}
+    <div className="row l"><Pills cur={both?2:stp} items={['1-day buffer','5-day buffer']}/>{!both&&!cur&&<span className="chip y">👉 Pipe laying → day {tP} · Backfill → day {tB}</span>}</div>
+    <div className="board grow">
+      <div className="bhd">📈 {both?'Line of Balance · 5-day buffer':'Drag 🏗️ Pipe laying and 🚛 Backfill onto the dashed lines · '+b+'-day gaps'}<Info k="buffer"/></div>
+      <Lob tMax={26} lines={[...plan.map((p,i)=>({...p,c:CREWS[i].c})),...ghosts]} cursor={live?clk.t:null}
+        drag={live||both?null:{idx:[1,2],lim:[[1,12],[1,20]],onMove:(i,v)=>{if(v!==(i===1?pS:bS))DL.inc('line_moves');if(i===1)setPS(v);else setBS(v)}}}/>
+      <Stats items={[{l:'Start gap',v:gs+' d',k:gs===b?'good':''},{l:'End gap',v:ge+' d',k:ge===b?'good':''},{l:'Days',v:projDur(plan)}]}/>
+      <div className="gapnote"><span><b>Start gap</b> = Pipe laying start − Excavation start</span><span><b>End gap</b> = Backfill finish − Pipe laying finish</span></div>
+    </div>
+    {!both&&!cur&&onT&&<div className="banner good">✓ Both gaps are {b} day{b>1?'s':''}<span className="sp"/><button className="go" disabled={running} onClick={()=>{setRunning(true);clk.play(0,projEnd(plan))}}>▶ Run</button></div>}
+    {!both&&cur&&stp===0&&<div className="banner amber">⚡ Fast but bare · {cur.dur} days<span className="sp"/><button className="go" onClick={()=>{setStp(1);clk.set(0)}}>Next: 5-day buffer ▶</button></div>}
+    {both&&<><div className="dock"><div className="bhd">⚖ Comparison</div><div className="tbl-wrap"><table className="tbl">
+        <thead><tr><th>Buffer<Info k="buffer"/></th><th className="r">Pipe laying</th><th className="r">Backfill</th><th className="r">Finish</th><th className="r">Days</th><th className="r">Crew cost</th></tr></thead>
+        <tbody>{[0,1].map(j=><tr key={j}><td><b>{BUF[j]}-day</b> {j===0?'⚡ fast but bare':'🛡 room to absorb'}</td><td className="r">Day {res[j].P} → {res[j].P+12}</td><td className="r">Day {res[j].B} → {res[j].B+6}</td>
+          <td className="r">Day {res[j].end}</td><td className="r">{res[j].dur}</td><td className="r">$16,400</td></tr>)}
+          <tr className="grand"><td colSpan="4">Difference</td><td className="r">+{res[1].dur-res[0].dur} days</td><td className="r">$0</td></tr></tbody></table></div></div>
+      <div className="banner good">More buffer = more days, same crew cost<span className="sp"/><button className="go" onClick={()=>{DL.set({buffer1_days:res[0].dur,buffer5_days:res[1].dur});done()}}>Finish ▶</button></div></>}
+  </Split>);
+}
+
+/* ===== TRAINING 5 & 6 · EQUIPMENT, CREW BY CREW ===== */
+const DEF_START=[1,1,8],PKEY='pipelineRush.t5plan';
+function loadT5(){try{const p=JSON.parse(localStorage.getItem(PKEY));if(p&&p.sel&&p.S)return p}catch(e){}return window.__t5plan||null}
+function saveT5(p){window.__t5plan=p;try{localStorage.setItem(PKEY,JSON.stringify(p))}catch(e){}}
+function Equip({miss,done,target,init=null}){
+  const [ci,setCi]=useState(init?3:0);const [ph,setPh]=useState('pick');           // pick · measure · plot · confirm (current crew)
+  const [sel,setSel]=useState(init?init.sel.map(a=>a.slice()):[[0,1,0],[0,1,0],[0,1,0]]);
+  const [g,setG]=useState(0);const [S,setS]=useState(init?init.S.slice():DEF_START.slice());const [placed,setPlaced]=useState(init?[true,true,true]:[false,false,false]);
+  const [pk,setPk]=useState(0);const [att,setAtt]=useState(null);const [m,setM]=useState(null);const n=useRef(0);
+  const clk=useClock();const [running,setRunning]=useState(false);const [ran,setRan]=useState(false);clk.rate.current=3;
+  const crew=CREWS.map((c,i)=>{const s=sel[i];const r=s.reduce((a,v,j)=>a+v*EQUIP[c.k][j].r,0),dc=s.reduce((a,v,j)=>a+v*EQUIP[c.k][j].c,0);return{r,dc,D:r>0?durOf(r):0}});
+  const plan=crew.map((c,i)=>({S:S[i],D:c.D||1}));
+  const all=ci>=3;
+  const lead=ci>0&&ci<3?clash(plan[ci-1],plan[ci]):null;
+  const tMax=Math.max(18,Math.ceil(Math.max(...plan.filter((p,i)=>placed[i]||i===ci).map(endOf),0))+2);
+  const setCount=(j,d)=>{const x=sel.map(a=>a.slice());x[ci][j]=Math.max(0,Math.min(3,x[ci][j]+d));setSel(x)};
+  function dropRow(row,c2){if(c2!==ci||ph!=='measure'||g!==crew[ci].D)return;n.current++;
+    if(row!==ci){miss();setM({k:'bad',t:'✗ '+CREWS[ci].tag+' belongs in row '+(ci+1),n:n.current});return}
+    const p=placed.slice();p[ci]=true;setPlaced(p);setM(null);setPh('plot');setPk(0);Snd.ok()}
+  const tp=[{t:S[ci],ft:0},{t:S[ci]+(crew[ci]?crew[ci].D:0),ft:300}];
+  function pick(t,f){if(ph!=='plot')return;const q=tp[pk];n.current++;
+    if(t===q.t&&f===q.ft){setAtt(null);Snd.ok();if(pk===1){setPh('confirm');setM(null)}else setPk(1);return}
+    const near=Math.abs(t-q.t)<=1&&Math.abs(f-q.ft)<=25;setAtt({t,ft:f,lvl:near?'amber':'red'});miss();
+    setM({k:near?'amber':'bad',t:near?'≈ Close — tap the ring exactly':'✗ Tap the yellow ring',n:n.current})}
+  function moveStart(s){if(ph!=='confirm')return;if(s!==S[ci]){DL.inc('moves_'+CK[ci]);DL.ev('move',{crew:CREWS[ci].tag,start:s})}const x=S.slice();x[ci]=s;setS(x)}
+  /* T6: every built crew can move to any start day at any time; undo is only for changing machines */
+  const free=!!target;
+  const freeOk=i=>free&&!running&&placed[i]&&ph!=='measure'&&ph!=='plot'&&(i!==ci||ph==='confirm');
+  function moveAny(i,s){if(!freeOk(i))return;if(s!==S[i]){DL.inc('moves_'+CK[i]);DL.ev('move',{crew:CREWS[i].tag,start:s})}const x=S.slice();x[i]=s;setS(x);setRan(false);clk.set(0)}
+  const clashes=[1,2].map(i=>placed[i]&&placed[i-1]&&(i!==ci||ph==='confirm'||all)&&(i-1!==ci||ph==='confirm'||all)?clash(plan[i-1],plan[i]):null).map((c,k)=>c?{...c,f:k+1}:null).filter(Boolean);
+  function confirm(){if(lead)return;Snd.ok();setG(0);setM(null);
+    for(let j=ci+1;j<3;j++){if(!placed[j]){setCi(j);setPh('pick');return}
+      if(clash(plan[j-1],plan[j])){setCi(j);setPh('confirm');return}}
+    setCi(3);setPh('pick')}
+  const bid=loaded(crew.reduce((a,c)=>a+c.D*c.dc,0)),dur=projDur(plan);
+  const okD=!target||dur<=target.days,okC=!target||bid.total<=target.bid;
+  useEffect(()=>{if(running&&!clk.run&&clk.t>=projEnd(plan)-1e-6){setRunning(false);setRan(true);
+    DL.ev('run_result',{days:dur,total:bid.total,met:okD&&okC});if(!(okD&&okC))DL.inc('runs_missed_target');Snd.ok()}},[clk.run,clk.t]);
+  const warnNow=!!((lead&&ph==='confirm')||(free&&all&&clashes.length>0));
+  useEffect(()=>{if(warnNow){DL.inc('clash_warnings');DL.ev('clash',{crews:(lead&&ph==='confirm'?[ci]:clashes.map(c=>c.f)).map(f=>CREWS[f].tag+' into '+CREWS[f-1].tag).join(', ')})}},[warnNow]);
+  /* 3D */
+  const qty=sel.map(s=>({Small:s[0],Standard:s[1],Heavy:s[2]}));
+  let site;
+  if(all&&(running||ran)){const r=siteRun(plan,clk.t);site=<Site ft={r.ft} st={r.st} qty={qty} clock={'Day '+clk.t.toFixed(1)}/>}
+  else{const ft=CREWS.map((c,i)=>i===ci&&ph==='measure'?Math.min(PJ,g*crew[i].r):0);
+    const st=CREWS.map((c,i)=>i<ci||all?'ready':i===ci?(crew[i].r>0?(ph==='measure'&&g>0?'work':'ready'):'off'):'off');
+    site=<Site ft={ft} st={st} qty={qty} focus={all?null:ci}/>}
+  const lines=CREWS.map((c,i)=>(placed[i]&&(i!==ci||ph==='confirm'))?{...plan[i],c:c.c,lab:crew[i].r+' ft/d',labFr:[.8,.5,.25][i]}:null);
+  const lobLines=lines.map(l=>l||{S:0,D:1,c:'transparent',dash:true});
+  const pts=ph==='plot'&&pk===1?[{t:tp[0].t,ft:0,c:CREWS[ci].c}]:[];
+  const undo=k=>{if(running)return;DL.inc('revise_'+CK[k]);DL.ev('revise',{crew:CREWS[k].tag});const p=placed.slice();p[k]=false;setPlaced(p);setCi(k);setPh('pick');setG(0);setPk(0);setAtt(null);setM(null);setRan(false);clk.set(0)};
+  const isDone=i=>placed[i]&&i!==ci;
+  const tabs=<span className="ctabs">{CREWS.map((c,i)=>{const cur=i===ci,dn=isDone(i),canUndo=!running&&(dn||(cur&&ph!=='pick'));
+    return <button key={i} className={'ctab'+(cur?' on':'')+(dn?' ok':'')} disabled={!canUndo} title={canUndo?'Undo '+c.tag+' machines':''} onClick={()=>undo(i)}>
+      {dn?'✓ ':''}{c.ic} {c.tag}{canUndo&&<span className="undo">↺</span>}</button>})}</span>;
+  const deadline=target?1+target.days:null;
+  const counted=crew.map((c,i)=>(isDone(i)||(i===ci&&ph!=='pick'))&&c.r>0);
+  const spentDirect=crew.reduce((a,c,i)=>a+(counted[i]?c.D*c.dc:0),0);
+  const left=target?target.bid-loaded(spentDirect).total:null;
+  const note=target?{t:'💰 Budget left '+(left<0?'−':'')+money(Math.abs(left)),bad:left<0}:null;
+  return(<Split compact noMission site={site}>
+    <div className="dock eqslot">
+      <div className="bhd">{tabs}<span className="sp"/>{target&&<span className="chip y">🎯 ≤ {target.days} days · ≤ {money(target.bid)}</span>}{target&&<Info k="target"/>}</div>
+      <div className="unitnote" style={{marginTop:0}}>{free?'↔ Drag any crew\'s bar or LOB line to change its start day · ↺ Tap a trade to change its machines (rate → daily cost → budget and duration)':'↺ Tap any trade above to undo its machines'}{init?' · Started from your Training 5 plan':''}</div>
+      {!all&&ph==='pick'&&<>
+        <div className="unitnote" style={{marginTop:0}}>Pick machine size and number<Info k="equip"/></div>
+        <div className="opts">{EQUIP[CREWS[ci].k].map((e,j)=>(<div key={j} className={'opt'+(sel[ci][j]?' on':'')} style={{'--tc':CREWS[ci].c}}>
+          <div><b>{e.n}</b><small>{e.r} ft/d · {money(e.c)}/d</small></div>
+          <div className="step"><button aria-label={'Fewer '+e.n} onClick={()=>setCount(j,-1)}>−</button><output>{sel[ci][j]}</output><button aria-label={'More '+e.n} onClick={()=>setCount(j,1)}>+</button></div></div>))}</div>
+        <div className="mrow" style={{marginTop:8}}><span className="big num">{CREWS[ci].ic} Rate <b>{crew[ci].r} ft/d</b> · {money(crew[ci].dc)}/d</span><span className="sp"/>
+          <button className="go" disabled={crew[ci].r<=0} onClick={()=>{DL.ev('machines',{crew:CREWS[ci].tag,small:sel[ci][0],standard:sel[ci][1],heavy:sel[ci][2],rate:crew[ci].r,cost_per_day:crew[ci].dc});setPh('measure');setG(0)}}>Use these machines ▶</button></div>
+        <div className="unitnote">📐 Rate = slope: more or bigger machines → steeper line → fewer days, higher daily cost.<Info k="slope"/></div></>}
+      {!all&&ph==='measure'&&<Measure bare i={ci} rate={crew[ci].r} cost={crew[ci].dc} g={g} setG={setG} onTapBar={()=>dropRow(ci,ci)}/>}
+      {!all&&ph==='plot'&&<div className="banner amber">👆 Plot {CREWS[ci].tag} on the LOB: START, then END (tap the yellow ring)</div>}
+      {!all&&ph==='confirm'&&(lead
+        ?<div className="banner bad">⚠ {CREWS[ci].tag} runs into {CREWS[ci-1].tag} — drag its bar or line later</div>
+        :<div className="banner good">✓ {CREWS[ci].tag}: day {S[ci]} → {S[ci]+crew[ci].D} · no conflict<span className="sp"/><button className="go" onClick={confirm}>Confirm ▶</button></div>)}
+      {all&&!ran&&(free&&clashes.length?<div className="banner bad">⚠ {clashes.map(c=>CREWS[c.f].tag+' runs into '+CREWS[c.f-1].tag).join(' · ')}: drag its bar or line to another day</div>
+        :<div className="banner good">✓ {init&&target?'Your T5 plan · ':'Built · '}{dur} days · {money(bid.total)}<span className="sp"/><button className="go" disabled={running} onClick={()=>{DL.inc('runs');DL.ev('run',{days:dur,total:bid.total});setRunning(true);clk.play(0,projEnd(plan))}}>▶ Run</button></div>)}
+      {all&&ran&&(okD&&okC
+        ?<div className="banner good">{target?'🎯 Both targets met · '+dur+' days · '+money(bid.total):'✓ Schedule complete · '+dur+' days'}<span className="sp"/><button className="go" onClick={()=>{if(!target)saveT5({sel,S});else saveT6({sel,S});
+          DL.set({...schedCols(crew.map((c,i)=>({rate:c.r,dc:c.dc,S:S[i],E:S[i]+c.D,fleet:fleetTxt(sel[i])}))),duration:dur,direct:bid.direct,indirect:bid.ind,profit:bid.pr,total:bid.total,
+            ...(target?{target_days:target.days,target_cost:target.bid,met_days:okD,met_cost:okC,budget_left:target.bid-bid.total}:{})});
+          DL.snap(planShot(target?'Training 6 · Hit the target':'Training 5 · Equipment',plan,crew.map(c=>c.r),deadline));done()}}>Finish ▶</button></div>
+        :<div className="banner bad">✗ {!okD?dur+' days > '+target.days:''}{!okD&&!okC?' · ':''}{!okC?money(bid.total)+' > '+money(target.bid):''}<span className="sp"/><small>Undo a trade above</small><button className="go ghost sm" onClick={()=>{miss();setRan(false);clk.set(0)}}>OK</button></div>)}
+      <Banner m={m}/>
+    </div>
+    <div className="charts">
+      <div className="board barb"><div className="bhd">📊 Bar chart<Info k="bar"/>{ph==='measure'&&!all&&<span className="chip y">⬇ drag to row {ci+1}</span>}<span className="sp"/>{target&&<span className={'budgetleft'+(left<0?' bad':'')}>💰 Budget left {(left<0?'−':'')+money(Math.abs(left))} <small>of {money(target.bid)}</small></span>}</div>
+        <Timeline tMax={tMax} deadline={deadline} onDropRow={dropRow} onSlide={(i,v)=>{if(free&&freeOk(i)){if(i===ci&&ph==='confirm')moveStart(v);else moveAny(i,v)}else if(i===ci)moveStart(v)}}
+          rows={CREWS.map((c,i)=>({...c,placed:placed[i],S:S[i],D:crew[i].D||1,min:1,locked:free?!freeOk(i):i!==ci,canSlide:free?freeOk(i):i===ci&&ph==='confirm',hot:i===ci&&ph==='measure'&&g===crew[ci].D,st:isDone(i)?'✓':''}))}/>
+</div>
+      <div className="board lobb"><div className="bhd">📈 Line of Balance<Info k="lob"/>{((lead&&ph==='confirm')||(free&&all&&clashes.length>0))&&<><span className="chip no">⚠ CONFLICT</span><Info k="conflict"/></>}</div>
+        <Lob tMax={tMax} deadline={deadline} note={note} lines={lobLines} points={pts} ring={ph==='plot'&&!all?{t:tp[pk].t,ft:tp[pk].ft}:null} attempt={att}
+          hit={lead&&ph==='confirm'?{t:lead.t,ft:lead.ft}:(free&&clashes.length?{t:clashes[0].t,ft:clashes[0].ft}:null)} cursor={all&&(running||ran)?clk.t:null} onPick={ph==='plot'&&!all?pick:undefined}
+          drag={free?(()=>{const idx=[0,1,2].filter(freeOk);return idx.length?{idx,lim:idx.map(()=>[1,tMax-1]),onMove:(i,v)=>{if(i===ci&&ph==='confirm')moveStart(v);else moveAny(i,v)}}:null})():(ph==='confirm'&&!all?{idx:[ci],lim:[[1,tMax-1]],onMove:(i,v)=>moveStart(v)}:null)}/></div>
+    </div>
+    <EqBudget crew={crew} S={S} show={CREWS.map((c,i)=>isDone(i))}/>
+  </Split>);
+}
+function EqBudget({crew,S,show}){
+  const direct=crew.reduce((a,c,i)=>a+(show[i]?c.D*c.dc:0),0),b=loaded(direct),any=show.some(Boolean);
+  const v=x=>any?money(x):'—';
+  return(<div className="dock budget"><div className="bhd">📋 Schedule & budget</div><div className="tbl-wrap"><table className="tbl">
+    <thead><tr><th>Activity</th><th className="r">Rate<Info k="rate"/></th><th className="r">Daily cost<Info k="daily"/></th><th className="r">Start</th><th className="r">End<Info k="startend"/></th><th className="r">Days<Info k="days"/></th><th className="r">Cost</th></tr></thead>
+    <tbody>{CREWS.map((c,i)=><tr key={c.k}><td style={{color:c.c,fontWeight:900}}>{c.ic} {c.tag}</td>{show[i]
+        ?<><td className="r">{crew[i].r} ft/d</td><td className="r">{money(crew[i].dc)}/d</td><td className="r">Day {S[i]}</td><td className="r">Day {S[i]+crew[i].D}</td><td className="r">{crew[i].D}</td><td className="r">{money(crew[i].D*crew[i].dc)}</td></>
+        :<><td className="r muted">—</td><td className="r muted">—</td><td className="r muted">—</td><td className="r muted">—</td><td className="r muted">—</td><td className="r muted">—</td></>}</tr>)}
+      <tr className="tot"><td colSpan="6">Direct</td><td className="r">{v(b.direct)}</td></tr>
+      <tr><td colSpan="6">Indirect (30%)</td><td className="r">{v(b.ind)}</td></tr>
+      <tr><td colSpan="6">Profit (5%)</td><td className="r">{v(b.pr)}</td></tr>
+      <tr className="grand"><td colSpan="6">Total project cost<Info k="bid"/></td><td className="r">{v(b.total)}</td></tr>
+    </tbody></table></div></div>);
+}
+function M5(p){return <Equip {...p}/>}
+function M6(p){const [init]=useState(loadT5);return <Equip {...p} target={TARGET} init={init}/>}
+/* ===== STAGE 2 · WHEN THE SITE BITES (risk events on the player's own T6 plan) =====
+   Real machine rates; only finish days round up. A crew that reaches the crew ahead WAITS and is still paid.
+   Response fees are paid at face value. Late days cost $1,000 (liquidated damages).
+   Borrowing moves machines between crews for the whole event: the borrower speeds up, the lender slows down. */
+const SZ=['Small','Standard','Heavy'];
+const P6KEY='pipelineRush.t6plan',R2DEF={sel:[[0,1,1],[0,0,2],[0,1,1]],S:[1,3,5]};
+function loadT6(){try{const p=JSON.parse(localStorage.getItem(P6KEY));if(p&&p.sel&&p.S)return p}catch(e){}return window.__t6plan||null}
+function saveT6(p){window.__t6plan=p;try{localStorage.setItem(P6KEY,JSON.stringify(p))}catch(e){}}
+const R2LD=1000;
+const R2EV=[
+ {id:'E2',ic:'🪨',name:'Hard rock refusal',crew:0,at:225,len:2,what:'The excavator hits rock at 225 ft: half speed for 2 days.',
+  opts:[{k:'A',n:'Absorb',s:'Dig on at half speed · $0',type:'absorb'},
+        {k:'B',n:'Rock breaker',s:'$900 · slowdown removed',type:'reset',fee:900},
+        {k:'C',n:'Hire an excavator',s:'Pick one machine · day rate × 2 days + $200 delivery',type:'hire',kind:'exc'},
+        {k:'D',n:'Borrow from Backfill',s:'Pick one machine · Backfill slows for 2 days',type:'borrow',lenders:[2]}]},
+ {id:'P1',ic:'🕳️',name:'Trench collapse',crew:1,at:120,len:2,what:'A trench wall fails behind the pipe crew: Pipe laying stops until the trench is made safe.',
+  opts:[{k:'A',n:'Borrow an excavator',s:'Pick a crew and one machine · stop: Small 3 d, Standard 2 d, Heavy 1 d',type:'borrow',lenders:[0,2]},
+        {k:'B',n:'Protection equipment',s:'$1,800 · no stop, back to normal today',type:'reset',fee:1800},
+        {k:'C',n:'Hire an excavator',s:'Pick one machine · stop: Small 3 d, Standard 2 d, Heavy 1 d',type:'hire',kind:'exc'}]},
+ {id:'B1',ic:'🧪',name:'Poor compaction',crew:2,at:120,len:3,what:'A density test fails behind the backfill crew: Backfill works at 60% for 3 days.',
+  opts:[{k:'A',n:'Absorb',s:'Rework at 60% for 3 days · $0',type:'absorb'},
+        {k:'B',n:'Hire a backfill set',s:'Pick one machine · day rate × 3 days + $200 delivery',type:'hire',kind:'back'},
+        {k:'C',n:'Compactor',s:'$500 · slowdown removed',type:'reset',fee:500},
+        {k:'D',n:'Borrow from Excavation',s:'Pick one machine · Excavation slows for 3 days',type:'borrow',lenders:[0]}]}];
+const KEYS=['exc','pipe','back'];
+const sumRate=(crew,q)=>q.reduce((a,n,j)=>a+n*EQUIP[KEYS[crew]][j].r,0);
+const sumCost=(crew,q)=>q.reduce((a,n,j)=>a+n*EQUIP[KEYS[crew]][j].c,0);
+const HIRE_MOB=200,STOP=[3,2,1];
+const rateOf=(crew,j)=>EQUIP[KEYS[crew]][j].r;
+/* how long the event acts, given the response and the one machine used */
+function r2len(e,oi,m){const E=R2EV[e],o=E.opts[oi];if(E.id!=='P1')return E.len;if(o.type==='reset')return 0;return m&&m.j!=null?STOP[m.j]:0}
+function r2fee(e,oi,m){const E=R2EV[e],o=E.opts[oi];if(o.type==='reset')return o.fee;if(o.type!=='hire'||!m||m.j==null)return 0;
+  return EQUIP[o.kind][m.j].c*r2len(e,oi,m)+HIRE_MOB}
+function r2effect(e,oi,m,te){const E=R2EV[e],o=E.opts[oi],out={mods:[],adds:[],fees:r2fee(e,oi,m)},d=r2len(e,oi,m),a=te,b=te+d;
+  const z=m&&m.j!=null?SZ[m.j]:'';
+  if(E.id==='P1'){if(o.type==='reset')return out;
+    out.mods.push([1,a,b,0,'🕳️ Trench collapse · stopped']);
+    if(o.type==='borrow')out.adds.push([m.L,a,b,-rateOf(m.L,m.j),'🔁 Lent '+z+' to make the trench safe']);
+    if(o.type==='hire')out.mods.push([1,a,b,1,'🚚 hired '+z+' excavator on the trench']);
+    return out}
+  if(o.type!=='reset')out.mods.push([E.crew,a,b,E.id==='E2'?.5:.6,E.id==='E2'?'🪨 Rock refusal · ½ speed':'🧪 Poor compaction · 60%']);
+  if(o.type==='hire')out.adds.push([E.crew,a,b,EQUIP[KEYS[E.crew]][m.j].r,'🚚 + hired '+z]);
+  if(o.type==='borrow'){out.adds.push([E.crew,a,b,EQUIP[KEYS[E.crew]][m.j].r,'🔁 + borrowed '+z+' from '+CREWS[m.L].tag]);
+    out.adds.push([m.L,a,b,-rateOf(m.L,m.j),'🔁 Lent '+z+' to '+CREWS[E.crew].tag])}
+  return out}
+function r2plan(){const raw=loadT6(),p=raw||R2DEF;
+  const rate=[0,1,2].map(i=>sumRate(i,p.sel[i])),cost=[0,1,2].map(i=>sumCost(i,p.sel[i]));
+  const P={own:!!raw,sel:p.sel.map(a=>a.slice()),S:p.S.slice(),rate,cost};
+  const b=r2sim(P,[],{},{},[0,0,0],[]);P.base=b;P.deadline=b.dur+2;P.dayBurn=loaded(cost.reduce((a,c)=>a+c,0)).total;P.budget=Math.ceil((b.total+P.dayBurn)/100)*100;return P}
+/* day-by-day engine: every day each crew moves rate × factors; its last day only finishes the feet left
+   (still a full paid day). Events, loans and pauses start at the start of a day. Lines may cross: crossings are reported. */
+function r2sim(P,evs,picks,borrows,extra,pauses){pauses=pauses||[];
+  const S=P.S.map((s,i)=>s+extra[i]),r=P.rate,x=[0,0,0],F=[null,null,null],tr=[[],[],[]],wait=[0,0,0],te={},conf=[null,null,null],segs=[[],[],[]];
+  let mods=pauses.map(p=>[p.c,p.a,p.a+p.n,0,'⏸ Paused']),adds=[],fees=0;
+  for(let i=0;i<3;i++)tr[i].push({t:S[i],x:0,w:false});
+  for(let day=Math.min(...S);day<80&&F.some(f=>f===null);day++){
+    for(const e of evs)if(te[e]==null&&x[R2EV[e].crew]>=R2EV[e].at-1e-9){te[e]=day;if(picks[e]!=null){const f=r2effect(e,picks[e],borrows[e],day);mods=mods.concat(f.mods);adds=adds.concat(f.adds);fees+=f.fees}}
+    const x0=x.slice();
+    for(let i=0;i<3;i++){if(F[i]!==null||day<S[i])continue;
+      let m=1,add=0;const labs=[];
+      for(const [c,a,b,k,l] of mods)if(c===i&&day>=a&&day<b){m*=k;if(l&&!labs.includes(l))labs.push(l)}
+      for(const [c,a,b,k,l] of adds)if(c===i&&day>=a&&day<b){add+=k;if(l&&!labs.includes(l))labs.push(l)}
+      if(labs.includes('⏸ Paused')){m=0;add=0;labs.splice(0,labs.length,'⏸ Paused')}
+      const v=Math.max(0,r[i]*m+add),adv=Math.min(v,PJ-x[i]);
+      if(v<=1e-9)wait[i]++;
+      x[i]+=adv;const tEnd=x[i]>=PJ-1e-9&&v>0?day+adv/v:day+1;
+      tr[i].push({t:tEnd,x:x[i],w:false});
+      const lab=labs.length?labs.join(' · '):'Working',sg=segs[i][segs[i].length-1];
+      if(sg&&sg.lab===lab&&Math.abs(sg.rate-v)<1e-9&&sg.b===day){sg.b=day+1;sg.ft+=adv}else segs[i].push({lab,rate:v,a:day,b:day+1,ft:adv,red:lab!=='Working'});
+      if(x[i]>=PJ-1e-9)F[i]=tEnd}
+    for(let i=1;i<3;i++){if(conf[i]||day<S[i])continue;const L=i-1;
+      if(F[L]!==null&&F[L]<=day+1e-9)continue;
+      const f0=x0[i],f1=x[i],l0=x0[L],l1=x[L];
+      const fT=F[i]!==null&&F[i]<=day+1+1e-9?F[i]:null,lT=F[L]!==null&&F[L]<=day+1+1e-9?F[L]:null;
+      if(fT!==null&&(lT===null||fT<=lT+1e-9)){conf[i]={i,t:fT,ft:PJ};continue}
+      if(f1>1e-9&&lT===null&&f1>=l1-1e-9){const den=(f1-f0)-(l1-l0);const u=f0<l0-1e-9&&den>1e-9?Math.min(1,(l0-f0)/den):0;conf[i]={i,t:day+u,ft:f0+u*(f1-f0)}}}
+  }
+  const E=F.map(f=>Math.ceil(f-1e-9)),paid=E.map((e,i)=>e-S[i]),direct=paid.reduce((a,p,i)=>a+p*P.cost[i],0),b=loaded(direct);
+  const dur=Math.max(...E)-Math.min(...S),late=P.deadline!=null?Math.max(0,dur-P.deadline):0,ld=late*R2LD;
+  return{S,E,F,paid,wait,tr,te,segs,fees,direct,b,dur,late,ld,total:b.total+fees+ld,conflicts:conf.filter(Boolean)}}
+function posAt(tr,t){if(t<=tr[0].t)return{x:0,w:false};for(let k=1;k<tr.length;k++){if(tr[k].t>=t){const a=tr[k-1],b=tr[k],f=(t-a.t)/Math.max(1e-9,b.t-a.t);return{x:a.x+(b.x-a.x)*f,w:b.w}}}return{x:PJ,w:false}}
+function r2site(res,t){const ft=[],st=[];for(let i=0;i<3;i++){const p=posAt(res.tr[i],t),q=posAt(res.tr[i],t+.06);ft.push(p.x);
+  st.push(t<res.S[i]?'ready':p.x>=PJ-1e-6?'done':(q.x-p.x)<.05?'ready':'work')}return{ft,st}}
+function r2log(rec){try{const K='pipelineRush.s2log',a=JSON.parse(localStorage.getItem(K)||'[]');a.push({...rec,at:Date.now()});localStorage.setItem(K,JSON.stringify(a.slice(-400)))}catch(e){}
+  (window.__s2log=window.__s2log||[]).push(rec)}
+const r2stars=left=>left<0?0:left>=2000?3:left>=1000?2:1;
+const fleetTxt=q=>q.map((n,j)=>n?n+' '+SZ[j]:null).filter(Boolean).join(' + ')||'none';
+function r2todate(P,res,t,feeLog){
+  const days=CREWS.map((c,i)=>t<=res.S[i]?0:Math.min(t,res.E[i])-res.S[i]);
+  const wait=CREWS.map((c,i)=>{let w=0;const tr=res.tr[i];for(let k=1;k<tr.length;k++)if(tr[k].t<=t&&tr[k].x<PJ-1e-6&&tr[k].x-tr[k-1].x<1e-6)w+=tr[k].t-tr[k-1].t;return w});
+  const fees=feeLog.filter(f=>f.t<=t+1e-9).reduce((a,f)=>a+f.fee,0);
+  const crew=days.reduce((a,d,i)=>a+d*P.cost[i],0),b=loaded(Math.round(crew));
+  return{days,wait,fees,crew,b,total:b.total+fees}}
+function RiskSheet({P,res,budget,t,ended,feeLog}){
+  const plan=P.base.paid;
+  if(!ended){const d=r2todate(P,res,t,feeLog);return(<div className="dock budget"><div className="bhd">📋 Planned vs actual · so far<Info k="planvs"/><span className="sp"/><span className="chip">Day {t.toFixed(1)}</span></div><div className="tbl-wrap"><table className="tbl">
+    <thead><tr><th>Activity</th><th className="r">Rate</th><th className="r">Planned</th><th className="r">Days on site</th><th className="r">Stopped<Info k="ripple"/></th><th className="r">Spent</th></tr></thead>
+    <tbody>{CREWS.map((c,i)=><tr key={c.k}><td style={{color:c.c,fontWeight:900}}>{c.ic} {c.tag}</td><td className="r">{P.rate[i]} ft/d</td><td className="r">{plan[i]} d</td>
+        <td className={'r'+(d.days[i]>plan[i]+1e-6?' bad':'')}>{d.days[i]>0?d.days[i].toFixed(1)+' d':'—'}</td><td className={'r'+(d.wait[i]>.05?' bad':'')}>{d.wait[i]>.05?d.wait[i].toFixed(1)+' d':'—'}</td>
+        <td className="r">{money(d.days[i]*P.cost[i])}</td></tr>)}
+      <tr><td colSpan="5">Crew cost + 30% indirect + 5% profit</td><td className="r">{money(d.b.total)}</td></tr>
+      <tr><td colSpan="5">Response fees</td><td className="r">{money(d.fees)}</td></tr>
+      <tr className="grand"><td colSpan="5">Spent so far · budget {money(budget)}</td><td className="r">{money(d.total)}</td></tr>
+    </tbody></table></div></div>)}
+  const left=budget-res.total;
+  return(<div className="dock budget"><div className="bhd">📋 Planned vs actual · final<Info k="planvs"/></div><div className="tbl-wrap"><table className="tbl">
+    <thead><tr><th>Activity</th><th className="r">Rate</th><th className="r">Planned</th><th className="r">Paid</th><th className="r">Stopped<Info k="ripple"/></th><th className="r">Cost</th></tr></thead>
+    <tbody>{CREWS.map((c,i)=><tr key={c.k}><td style={{color:c.c,fontWeight:900}}>{c.ic} {c.tag}</td><td className="r">{P.rate[i]} ft/d</td><td className="r">{plan[i]} d</td>
+        <td className={'r'+(res.paid[i]>plan[i]?' bad':res.paid[i]<plan[i]?' good':'')}>{res.paid[i]} d</td><td className={'r'+(res.wait[i]>.05?' bad':'')}>{res.wait[i]>.05?res.wait[i].toFixed(1)+' d':'—'}</td>
+        <td className="r">{money(res.paid[i]*P.cost[i])}</td></tr>)}
+      <tr className="tot"><td colSpan="5">Crew cost (direct)</td><td className="r">{money(res.b.direct)}</td></tr>
+      <tr><td colSpan="5">Indirect (30%) + Profit (5%)</td><td className="r">{money(res.b.ind+res.b.pr)}</td></tr>
+      <tr><td colSpan="5">Response fees</td><td className="r">{money(res.fees)}</td></tr>
+      <tr><td colSpan="5">Late fee ({res.late} d × $1,000)<Info k="latefee"/></td><td className={'r'+(res.ld?' bad':'')}>{money(res.ld)}</td></tr>
+      <tr className="grand"><td colSpan="5">Total · budget {money(budget)}</td><td className="r">{money(res.total)}</td></tr>
+      <tr><td colSpan="5">Budget left</td><td className={'r '+(left<0?'bad':'good')}>{left<0?'−':''}{money(Math.abs(left))}</td></tr>
+    </tbody></table></div></div>);
+}
+function Debrief({P,res,picks,borrows,budget,pauses}){
+  const items=[];
+  (pauses||[]).forEach(p=>items.push({ic:'⏸',t:'You paused '+CREWS[p.c].tag+' for '+p.n+' day'+(p.n>1?'s':'')+' from Day '+p.a.toFixed(1)+', still paid',bad:true}));
+  Object.keys(picks).forEach(e=>{const E=R2EV[e],o=E.opts[picks[e]],m=borrows[e];
+    items.push({ic:E.ic,t:E.name+' → you chose '+o.k+' · '+o.n+(m&&m.j!=null?' ('+SZ[m.j]+(o.type==='borrow'?' from '+CREWS[m.L].tag:'')+')':'')});
+    if(E.id==='P1'&&o.type!=='reset')items.push({ic:'⏸',t:'Pipe laying stopped '+r2len(+e,picks[e],m)+' day'+(r2len(+e,picks[e],m)>1?'s':'')+' while the trench was made safe, still paid',bad:true});
+    if(o.type==='borrow'){const L=m.L,lose=rateOf(L,m.j),wasDone=res.F[L]!=null&&res.te[e]!=null&&res.te[e]>=res.F[L]-1e-6;
+      items.push({ic:'🔁',t:wasDone?CREWS[L].tag+' had already finished, so lending its idle machine cost nothing':CREWS[L].tag+' worked at '+Math.max(0,P.rate[L]-lose)+' ft/d instead of '+P.rate[L]+' while its '+SZ[m.j]+' was away, still paying for it'})}});
+  CREWS.forEach((c,i)=>{const dd=res.paid[i]-P.base.paid[i];
+    if(res.S[i]>P.S[i])items.push({ic:'⏩',t:'You delayed '+c.tag+' to start Day '+res.S[i]+' instead of Day '+P.S[i]});
+    if(dd>0)items.push({ic:'💸',t:c.tag+': '+res.paid[i]+' paid days instead of '+P.base.paid[i]+' → +'+money(dd*P.cost[i])+' crew cost',bad:true});
+    if(dd<0)items.push({ic:'✅',t:c.tag+': '+res.paid[i]+' paid days instead of '+P.base.paid[i]+' → '+money(dd*P.cost[i])});});
+  if(res.fees)items.push({ic:'🧾',t:'Response fees: '+money(res.fees)});
+  if(res.late)items.push({ic:'⏰',t:'Finished Day '+Math.max(...res.E)+': '+res.late+' day'+(res.late>1?'s':'')+' past the deadline → late fee '+money(res.ld),bad:true});
+  else items.push({ic:'⏰',t:'Finished Day '+Math.max(...res.E)+', on time'});
+  const left=budget-res.total;
+  items.push({ic:left<0?'✗':'✓',t:'Total '+money(res.total)+' vs budget '+money(budget)+' → '+(left<0?money(-left)+' over':money(left)+' left'),bad:left<0,strong:true});
+  return(<div className="debrief"><h4>🔎 What happened</h4><ul>{items.map((x,i)=><li key={i} className={(x.bad?'bad':'')+(x.strong?' strong':'')}><span>{x.ic}</span>{x.t}</li>)}</ul></div>);
+}
+/* one-machine picker for Hire and Borrow: borrow shows only machines the lending crew has */
+function MachinePicker({P,e,oi,m,setM,t,res,lenderOk}){const E=R2EV[e],o=E.opts[oi],c=E.crew,isB=o.type==='borrow',L=isB?m.L:null;
+  const kind=E.id==='P1'?'exc':KEYS[c];
+  const sizes=SZ.map((z,j)=>({z,j,ok:!isB||(L!=null&&P.sel[L][j]>0)})).filter(x=>x.ok);
+  const own=P.rate[c],j=m.j,d=j!=null?r2len(e,oi,m):null,fee=j!=null?r2fee(e,oi,m):0;
+  const idle=isB&&L!=null&&res.F[L]!=null&&res.F[L]<=t+1e-6,startsLater=isB&&L!=null&&res.S[L]>t+1e-6;
+  let mine=null;if(j!=null){const add=EQUIP[kind][j].r;
+    if(E.id==='E2')mine=<>🚜 Excavation <b>{own*.5} → {own*.5+add} ft/d</b> <small>(half speed + {SZ[j]})</small></>;
+    else if(E.id==='P1')mine=<>🏗️ Pipe laying <b>stops {d} day{d>1?'s':''}</b> <small>({SZ[j]} excavator makes the trench safe)</small></>;
+    else mine=<>🚛 Backfill <b>{+(own*.6).toFixed(1)} → {+(own*.6+add).toFixed(1)} ft/d</b> <small>(60% + {SZ[j]})</small></>}
+  return(<div className="borrow">
+    <div className="bhd" style={{marginBottom:4}}>{isB?'🔁 Borrow one machine':'🚚 Hire one machine from outside'}<small style={{color:'var(--soft)',fontWeight:700}}>{isB?' · the lending crew keeps paying for it':' · day rate × days on site + '+money(HIRE_MOB)+' delivery'}</small></div>
+    {isB&&o.lenders.length>1&&o.lenders.filter(lenderOk).length>1&&<div className="row l" style={{gap:6,marginBottom:6}}><span className="unitnote" style={{margin:0}}>From</span>{o.lenders.filter(lenderOk).map(Lx=>
+      <button key={Lx} type="button" className={'chip'+(L===Lx?' y':'')} aria-pressed={L===Lx} onClick={()=>setM({L:Lx,j:null})}>{CREWS[Lx].ic} {CREWS[Lx].tag}</button>)}</div>}
+    {(!isB||L!=null)&&<div className="opts" role="radiogroup">{sizes.map(x=>{const r=EQUIP[kind][x.j].r;return(
+      <button key={x.j} type="button" role="radio" aria-checked={j===x.j} className={'opt r2opt'+(j===x.j?' on':'')} style={{'--tc':CREWS[isB?L:c].c}} onClick={()=>setM({L,j:x.j})}>
+        <div><b>{x.z}{isB?'':' '+(kind==='exc'?'excavator':'backfill set')}</b>
+        <small>{E.id==='P1'?'stop '+STOP[x.j]+' d':'+'+r+' ft/d'}{isB?' · '+CREWS[L].tag+' −'+rateOf(L,x.j)+' ft/d':' · '+money(EQUIP[kind][x.j].c)+'/d'}{isB?' · on site '+P.sel[L][x.j]:''}</small></div></button>)})}</div>}
+    {j!=null&&<div className="brates"><span>{mine}</span>
+      {isB?(idle?<span>{CREWS[L].ic} {CREWS[L].tag} <b>finished · machine idle</b></span>
+        :<span>{CREWS[L].ic} {CREWS[L].tag} <b className="down">{P.rate[L]} → {Math.max(0,P.rate[L]-rateOf(L,j))} ft/d</b> <small>for {d} day{d>1?'s':''}{startsLater?' (it starts during the loan)':''}</small></span>)
+        :<span>🧾 Fee <b>{money(fee)}</b> <small>{d} d × {money(EQUIP[kind][j].c)} + {money(HIRE_MOB)}</small></span>}</div>}
+  </div>)}
+function FinalSchedule({P,res,title}){
+  return(<div className="dock budget"><div className="bhd">{title||'📋 Final schedule'}<Info k="planvs"/></div><div className="tbl-wrap"><table className="tbl fsched">
+    <thead><tr><th>Crew</th><th className="r">Rate</th><th className="r">Dur</th><th className="r">$/d</th><th className="r">Start</th><th className="r">End</th></tr></thead>
+    <tbody>{CREWS.map((c,i)=><React.Fragment key={c.k}>
+      <tr className="crewhd"><td colSpan="6" style={{color:c.c}}>{c.ic} {c.tag}</td></tr>
+      {res.segs[i].map((g,k)=>{const last=k===res.segs[i].length-1,b=last?res.E[i]:g.b;return(
+        <tr key={k} className={g.red?'seg red':'seg'}><td>{g.lab}</td><td className="r">{+g.rate.toFixed(1)} ft/d</td><td className="r">{b-g.a} d</td>
+          <td className="r">{money(P.cost[i])}</td><td className="r">Day {g.a}</td><td className="r">Day {b}</td></tr>)})}
+      <tr className="segtot"><td>{c.tag} total</td><td/><td className="r">{res.paid[i]} d</td><td/><td className="r">Day {res.S[i]}</td><td className="r">Day {res.E[i]}</td></tr>
+    </React.Fragment>)}
+      <tr className="grand"><td>Project</td><td/><td className="r">{res.dur} d</td><td/><td className="r">Day {Math.min(...res.S)}</td><td className="r">Day {Math.max(...res.E)}</td></tr>
+    </tbody></table></div><div className="unitnote" style={{marginTop:4}}>Crews are paid every day on site, including stopped and paused days. A crew's last day counts as a full day.</div></div>)}
+function FinalBudget({P,res,picks,borrows,budget}){
+  const left=budget-res.total,fees=[];
+  Object.keys(picks).forEach(e=>{const f=r2fee(+e,picks[e],borrows[e]);if(f){const E=R2EV[e],o=E.opts[picks[e]],m=borrows[e];
+    fees.push({t:E.ic+' '+o.n+(m&&m.j!=null?' ('+SZ[m.j]+(o.type==='hire'?', '+r2len(+e,picks[e],m)+' d × '+money(EQUIP[o.kind][m.j].c)+' + '+money(HIRE_MOB)+' delivery':'')+')':''),v:f})}});
+  return(<div className="dock budget"><div className="bhd">💰 Final budget</div><div className="tbl-wrap"><table className="tbl">
+    <tbody>{CREWS.map((c,i)=><tr key={c.k}><td style={{color:c.c,fontWeight:800}}>{c.ic} {c.tag} ({res.paid[i]} d × {money(P.cost[i])})</td><td className="r">{money(res.paid[i]*P.cost[i])}</td></tr>)}
+      <tr className="tot"><td>Direct</td><td className="r">{money(res.b.direct)}</td></tr>
+      <tr><td>Indirect 30%</td><td className="r">{money(res.b.ind)}</td></tr>
+      <tr><td>Profit 5%</td><td className="r">{money(res.b.pr)}</td></tr>
+      {fees.map((f,k)=><tr key={k} className="seg red"><td>{f.t}</td><td className="r">+{money(f.v)}</td></tr>)}
+      {res.late>0&&<tr className="seg red"><td>⏰ Late fee ({res.late} d × $1,000)</td><td className="r">+{money(res.ld)}</td></tr>}
+      <tr className="grand"><td>Total</td><td className="r">{money(res.total)}</td></tr>
+      <tr><td>Budget</td><td className="r">{money(budget)}</td></tr>
+      <tr><td>Left</td><td className={'r '+(left<0?'bad':'good')}>{left<0?'−':''}{money(Math.abs(left))}</td></tr>
+    </tbody></table></div></div>)}
+function RiskLevel({evs,extraDays=0,done,lvl}){
+  const P=React.useMemo(()=>{const x=r2plan();x.deadline+=extraDays;return x},[]);const budget=Math.ceil((P.budget+extraDays*P.dayBurn)/100)*100;
+  const [ph,setPh]=useState('ready');const [picks,setPicks]=useState({});const [borrows,setBorrows]=useState({});const [fired,setFired]=useState([]);
+  const [cur,setCur]=useState(null);const [sel,setSel]=useState(null);const [m,setM]=useState({L:null,j:null});const [extra,setExtra]=useState([0,0,0]);const [feeLog,setFeeLog]=useState([]);const [pauses,setPauses]=useState([]);const [tab,setTab]=useState('lob');
+  const clk=useClock();const [spd,setSpd]=useState(1);clk.rate.current=1.1*spd;
+  const lg=useRef({evT:0,fixT:0,ev:null,extra:[0,0,0],np:0});
+  useEffect(()=>{clk.set(Math.min(...P.S));DL.set({plan_source:P.own?'own T6 plan':'sample plan',plan_days:P.base.dur,plan_total:P.base.total,budget,deadline:P.deadline})},[]);
+  const t=clk.t;
+  const key=JSON.stringify([picks,borrows,extra,pauses]);
+  const res=React.useMemo(()=>r2sim(P,evs,picks,borrows,extra,pauses),[key]);   // the truth: drives the run, never shown ahead of time
+  const pending=evs.filter(e=>!fired.includes(e)).sort((a,b)=>(res.te[a]??99)-(res.te[b]??99));
+  const nextT=pending.length&&res.te[pending[0]]!=null?res.te[pending[0]]:null,endT=Math.max(...res.F);
+  const ended=ph==='end',left=budget-res.total,ok=left>=0;
+  const play=()=>{if(ph==='ready')setPh('run');clk.play(t,nextT!=null?nextT:endT)};
+  useEffect(()=>{if(ph!=='run'||clk.run)return;
+    if(nextT!=null&&t>=nextT-1e-6){const e=pending[0];setFired(f=>[...f,e]);setCur(e);setSel(null);setM({L:null,j:null});setPh('event');lg.current.evT=DL.secs();DL.ev('event',{event:R2EV[e].id,name:R2EV[e].name,day:+t.toFixed(2)});Snd.alarm()}
+    else if(nextT==null&&t>=endT-1e-6){setPh('end');r2log({lvl,ev:'end',total:res.total,dur:res.dur,late:res.late,pass:ok,picks:{...picks},borrows:{...borrows},extra,plan:P.sel});
+      DL.set({...schedCols(CREWS.map((c,i)=>({rate:P.rate[i],dc:P.cost[i],S:res.S[i],E:res.E[i],wait:res.wait[i],fleet:fleetTxt(P.sel[i])}))),duration:res.dur,late_days:res.late,late_fee:res.ld,
+        direct:res.b.direct,indirect:res.b.ind,profit:res.b.pr,fees:res.fees,total:res.total,budget_left:left,met_days:res.late===0,met_cost:ok});
+      DL.snap(snapPNG({title:'Stage 2 · '+lvl+' · '+(ok?'within budget':'over budget'),sub:'Participant '+(DL.pid||'—')+' · attempt '+(DL.cur?DL.cur.attempt:'')+' · '+res.dur+' days · '+money(res.total)+' of '+money(budget),
+        tMax,deadline:Math.min(...P.S)+P.deadline,crews:CREWS.map((c,i)=>({tag:c.tag,c:c.c,rate:P.rate[i],S:res.S[i],E:res.E[i],red:res.segs[i].filter(g=>g.red),
+          pts:res.tr[i].map(z=>[z.t,z.x]),plan:[[P.S[i],0],[P.S[i]+PJ/P.rate[i],PJ]]}))}));
+      DL.end(ok?'pass':'fail',{stars:ok?r2stars(left):0});if(ok)Snd.ok();else Snd.bad()}},[t,clk.run,ph]);
+  const canSlide=i=>ph==='fix'&&res.S[i]>=t-1e-6;
+  const minStart=i=>Math.max(P.S[i],Math.ceil(t-1e-9));
+  const lenderOk=L=>!(res.F[L]!=null&&res.F[L]<=t+1e-6);
+  const ev=cur!=null?R2EV[cur]:null,oType=ev&&sel!=null?ev.opts[sel].type:null,isBorrow=oType==='borrow',isHire=oType==='hire',qOk=!(isBorrow||isHire)||(m.j!=null&&(!isBorrow||m.L!=null));
+  function confirm(){if(sel==null||!qOk)return;const e=cur,o=R2EV[e].opts[sel],np={...picks,[e]:sel},nb={...borrows,[e]:(isBorrow||isHire)?{...m}:null};
+    setPicks(np);setBorrows(nb);const fee=r2fee(e,sel,m);if(fee)setFeeLog(f=>[...f,{t,fee}]);
+    r2log({lvl,ev:R2EV[e].id,choice:o.k,type:o.type,machine:m.j!=null?SZ[m.j]:null,from:isBorrow?CREWS[m.L].tag:null,fee,day:+t.toFixed(2)});
+    {const id=R2EV[e].id,after=r2sim(P,evs,np,nb,extra,pauses).conflicts,now=DL.secs();
+      DL.ev('decision',{event:id,option:o.k,response:o.n,response_type:o.type,machine:m.j!=null&&(isBorrow||isHire)?SZ[m.j]:'',from:isBorrow?CREWS[m.L].tag:'',fee,day:+t.toFixed(2),conflicts:after.length});
+      DL.set({[id+'_day']:+t.toFixed(2),[id+'_option']:o.k,[id+'_response']:o.n,[id+'_machine']:m.j!=null&&(isBorrow||isHire)?SZ[m.j]:'',[id+'_borrow_from']:isBorrow?CREWS[m.L].tag:'',[id+'_fee']:fee,
+        [id+'_decision_sec']:Math.round((now-lg.current.evT)*10)/10,[id+'_conflicts']:after.length,[id+'_conflict_detail']:after.map(c=>CREWS[c.i].tag+' into '+CREWS[c.i-1].tag+' @'+Math.round(c.ft)+'ft d'+c.t.toFixed(1)).join('; ')});
+      DL.inc('conflicts_total',after.length);lg.current={...lg.current,ev:id,fixT:now,extra:extra.slice(),np:pauses.length}}
+    setCur(null);setSel(null);Snd.ok();
+    setPh('fix');setTab('lob')}
+  function go(){if(res.conflicts.length)return;
+    {const L=lg.current,parts=[];let np=0,nd=0;
+      pauses.slice(L.np).forEach(p=>{np++;parts.push('pause '+CREWS[p.c].tag+' '+p.n+'d')});
+      extra.forEach((x,i)=>{const d=x-L.extra[i];if(d){nd++;parts.push('delay '+CREWS[i].tag+' '+(d>0?'+':'')+d+'d')}});
+      DL.ev('fix',{event:L.ev,actions:parts.join('; ')||'none'});if(L.ev)DL.set({[L.ev+'_fix']:parts.join('; ')||'none',[L.ev+'_fix_sec']:Math.round((DL.secs()-L.fixT)*10)/10});
+      DL.inc('pauses',np);DL.inc('delays',nd);lg.current={...L,extra:extra.slice(),np:pauses.length}}r2log({lvl,ev:'fix',extra:extra.slice(),pauses:pauses.map(p=>({crew:CREWS[p.c].tag,from:+p.a.toFixed(2),days:p.n}))});setPh('run');if(!(nextT!=null&&t>=nextT-1e-6))clk.play(t,nextT!=null?nextT:endT)}
+  function retry(){if(!DL.cur)DL.begin(LVL_ID.indexOf(lvl));DL.set({plan_source:P.own?'own T6 plan':'sample plan',plan_days:P.base.dur,plan_total:P.base.total,budget,deadline:P.deadline});lg.current={evT:0,fixT:0,ev:null,extra:[0,0,0],np:0};clk.stop();clk.set(Math.min(...P.S));setPh('ready');setPicks({});setBorrows({});setFired([]);setCur(null);setSel(null);setM({L:null,j:null});setExtra([0,0,0]);setFeeLog([]);setPauses([])}
+  const slide=(i,s)=>{if(!canSlide(i))return;const x=extra.slice();x[i]=Math.max(minStart(i),s)-P.S[i];if(x[i]!==extra[i]){DL.inc('fix_adjustments');DL.ev('adjust',{crew:CREWS[i].tag,kind:'start day',value:P.S[i]+x[i]})}setExtra(x)};
+  const dragFor=i=>{if(res.F[i]!=null&&res.F[i]<=t+1e-6)return null;
+    if(res.S[i]>=t-1e-6){const S0=res.S[i];return{min:minStart(i)-S0,max:8,onMove:k=>slide(i,S0+k)}}
+    const n0=pauseNow(i);return{min:-n0,max:6,onMove:k=>setPause(i,Math.max(0,n0+k))}};
+  const pauseNow=i=>{const p=pauses.find(z=>z.c===i&&Math.abs(z.a-t)<1e-6);return p?p.n:0};
+  const setPause=(i,n)=>{if(n!==pauseNow(i)){DL.inc('fix_adjustments');DL.ev('adjust',{crew:CREWS[i].tag,kind:'pause days',value:n})}const rest=pauses.filter(z=>!(z.c===i&&Math.abs(z.a-t)<1e-6));setPauses(n>0?[...rest,{c:i,a:t,n}]:rest)};
+  const sp=r2site(res,t);
+  const qty=P.sel.map(s=>({Small:s[0],Standard:s[1],Heavy:s[2]}));
+  const site=<Site ft={sp.ft} st={sp.st} qty={qty} clock={'Day '+t.toFixed(1)} alert={ev?{big:ev.ic+' '+ev.name.toUpperCase(),msg:ev.what}:null}
+    player={{t,min:1,max:Math.max(endT,t,P.base.F[2]+2),run:clk.run,disabled:ph!=='ready'&&ph!=='run',spd,setSpd,onPlay:play,onPause:()=>clk.stop(),onScrub:()=>{}}}/>;
+  const bands=fired.filter(e=>res.te[e]!=null).map(e=>({a:res.te[e],b:res.te[e]+(picks[e]!=null?r2len(e,picks[e],borrows[e]):R2EV[e].len),label:R2EV[e].ic+' '+R2EV[e].name}));
+  const tMax=Math.max(12,Math.ceil(ended?Math.max(...res.E):Math.max(...P.base.E))+2);
+  const clip=tr=>{if(ended||ph==='fix')return tr;const o=tr.filter(z=>z.t<=t+1e-9);if(t>tr[0].t&&t<tr[tr.length-1].t-1e-9){const m=posAt(tr,t);o.push({t,x:m.x,w:m.w})}return o};
+  const bars=CREWS.map((c,i)=>{const fin=res.E[i],pe=P.base.E[i]+(res.S[i]-P.S[i]),shown=ended||ph==='fix'||t>=res.F[i]?fin:Math.max(pe,Math.ceil(t-1e-9));return{S:res.S[i],D:shown-res.S[i]}});
+  const sofar=r2todate(P,res,t,feeLog).total;
+  return(<Split compact noMission site={site}>
+    <div className="dock eqslot">
+      <div className="bhd"><span>{evs.map((e,k)=><span key={e} className={'chip'+(picks[e]!=null?' ok':e===cur?' y':'')} style={{marginRight:6}}>{fired.includes(e)?R2EV[e].ic+' '+R2EV[e].name+(picks[e]!=null?' · '+R2EV[e].opts[picks[e]].k:''):'❓ Event '+(k+1)}</span>)}</span>
+        <span className="sp"/><span className="chip y">💰 ≤ {money(budget)}</span><span className="chip">⏱ ≤ {P.deadline} days · late $1,000/d<Info k="latefee"/></span></div>
+      {ph==='ready'&&<div className="banner good">🔒 {P.own?'Your Training 6 plan':'Sample plan (finish Training 6 to use your own)'} · {P.base.dur} days · {money(P.base.total)} · {money(budget-P.base.total)} spare<span className="sp"/><button className="go" onClick={play}>▶ Run the job</button></div>}
+      {ph==='run'&&<div className="banner amber">🚧 Building… Day {t.toFixed(1)}{!clk.run&&<><span className="sp"/><button className="go" onClick={play}>▶ Resume</button></>}</div>}
+      {ph==='event'&&ev&&<>
+        <div className="banner bad">⚠ Day {t.toFixed(1)} · {ev.ic} {ev.name}: {ev.what}</div>
+        <div className="opts" role="group" aria-label="Responses">{ev.opts.map((o,k)=>(
+          (()=>{const avail=o.type!=='borrow'||o.lenders.some(lenderOk);const ls=o.type==='borrow'?o.lenders.filter(lenderOk):[];return(
+          <button key={k} type="button" disabled={!avail} className={'opt r2opt'+(sel===k?' on':'')+(avail?'':' off')} style={{'--tc':CREWS[ev.crew].c}} aria-pressed={sel===k} onClick={()=>{if(!avail)return;if(sel!==k)setM({L:ls.length===1?ls[0]:null,j:null});setSel(k)}}>
+            <div><b>{o.k} · {o.n}</b><small>{avail?o.s:'Not available: '+o.lenders.map(L=>CREWS[L].tag).join(' and ')+' has finished and its machines have left the site'}</small></div></button>)})()))}</div>
+        {(isBorrow||isHire)&&<MachinePicker P={P} e={cur} oi={sel} m={m} setM={setM} t={t} res={res} lenderOk={lenderOk}/>}
+        <div className="mrow" style={{marginTop:8}}><span className="unitnote" style={{margin:0}}>{(isBorrow||isHire)&&!qOk?(isBorrow&&m.L==null?'👆 Pick the crew to borrow from':'👆 Pick one machine to '+(isHire?'hire':'borrow')):'🤔 Who pays: days, dollars, or another crew? You’ll see the result as the job runs.'}</span><span className="sp"/>
+          <button className="go" disabled={sel==null||!qOk} onClick={confirm}>Commit ▶</button></div></>}
+      {ph==='fix'&&<>
+        {res.conflicts.length?<div className="banner bad">💥 {res.conflicts.map(c=>CREWS[c.i].tag+' runs into '+CREWS[c.i-1].tag+' at '+Math.round(c.ft)+' ft on Day '+c.t.toFixed(1)).join(' · ')}<Info k="conflict"/></div>
+          :<div className="banner good">✓ No lines cross. The schedule is safe.<span className="sp"/><button className="go" onClick={go}>Continue ▶</button></div>}
+        <div className="fixbox"><div className="bhd" style={{marginBottom:4}}>🛠 Fix the schedule <small style={{color:'var(--soft)',fontWeight:700}}>· drag a line on the LOB, or use + / − · pause a crew that's working · delay one that hasn't started</small></div>
+          {CREWS.map((c,i)=>{if(res.F[i]!=null&&res.F[i]<=t+1e-6)return null;const started=res.S[i]<t-1e-6;
+            return started
+              ?<div key={i} className="fixrow"><span style={{color:c.c,fontWeight:900}}>{c.ic} {c.tag}</span><span className="unitnote" style={{margin:0}}>working · pause from Day {t.toFixed(1)}</span><span className="sp"/>
+                <div className="step"><button aria-label={'Pause '+c.tag+' one day less'} onClick={()=>setPause(i,Math.max(0,pauseNow(i)-1))}>−</button><output>{pauseNow(i)} d</output><button aria-label={'Pause '+c.tag+' one day more'} onClick={()=>setPause(i,Math.min(6,pauseNow(i)+1))}>+</button></div></div>
+              :<div key={i} className="fixrow"><span style={{color:c.c,fontWeight:900}}>{c.ic} {c.tag}</span><span className="unitnote" style={{margin:0}}>not started · start day</span><span className="sp"/>
+                <div className="step"><button aria-label={'Start '+c.tag+' one day earlier'} onClick={()=>slide(i,res.S[i]-1)}>−</button><output>Day {res.S[i]}</output><button aria-label={'Start '+c.tag+' one day later'} onClick={()=>slide(i,res.S[i]+1)}>+</button></div></div>})}
+          {res.conflicts.length>0&&<div className="mrow" style={{marginTop:6}}><span className="unitnote" style={{margin:0}}>Continue unlocks when no lines cross.</span><span className="sp"/><button className="go" disabled>Continue ▶</button></div>}
+        </div></>}
+      {ended&&<>
+        {ok?<div className="banner good">✓ Done · Day {Math.max(...res.E)} · {money(res.total)} · {money(left)} under budget <span className="r2stars">{'★'.repeat(r2stars(left))}<span className="off">{'★'.repeat(3-r2stars(left))}</span></span><span className="sp"/><button className="go ghost sm" onClick={retry}>↺ Try another way</button><button className="go" onClick={()=>done(r2stars(left))}>Finish ▶</button></div>
+          :<div className="banner bad">✗ Over budget by {money(-left)}<span className="sp"/><button className="go" onClick={retry}>↺ Try again</button></div>}
+        <Debrief P={P} res={res} picks={picks} borrows={borrows} budget={budget} pauses={pauses}/></>}
+    </div>
+    <div className="charts tabbed">
+      <div className="ctabs2" role="tablist">
+        <button type="button" role="tab" aria-selected={tab==='bar'} className={'ctab'+(tab==='bar'?' on':'')} onClick={()=>setTab('bar')}>📊 Bar chart</button>
+        <button type="button" role="tab" aria-selected={tab==='lob'} className={'ctab'+(tab==='lob'?' on':'')} onClick={()=>setTab('lob')}>📈 Line of Balance</button>
+        <span className="sp"/><span className={'budgetleft'+(ended&&left<0?' bad':'')}>💰 {ended?'Left '+(left<0?'−':'')+money(Math.abs(left)):'Spent so far '+money(sofar)} <small>of {money(budget)}</small></span></div>
+      {tab==='bar'&&<div className="board barb"><div className="bhd">📊 Bar chart<Info k="bar"/>{ph==='fix'&&CREWS.some((c,i)=>canSlide(i))&&<span className="chip y">↔ or drag a crew that hasn't started</span>}<span className="sp"/>
+        </div>
+        <Timeline tMax={tMax} deadline={Math.min(...P.S)+P.deadline} onSlide={(i,s)=>slide(i,s)}
+          rows={CREWS.map((c,i)=>({...c,placed:true,S:bars[i].S,D:bars[i].D,min:P.S[i],fill:posAt(res.tr[i],t).x/PJ*((P.base.E[i]-P.S[i])/Math.max(1,bars[i].D)),locked:!canSlide(i),canSlide:canSlide(i),st:posAt(res.tr[i],t).x>=PJ-1e-6?'✓':''}))}/></div>}
+      {tab==='lob'&&<div className="board lobb"><div className="bhd">📈 Line of Balance<Info k="lob"/><span className="sp"/><span className="r2key"><i className="k1"/>planned <i className="k2"/>actual {ph==='fix'&&<><i className="k3"/>forecast</>} 💥 conflict</span></div>
+        <Lob tMax={tMax} deadline={Math.min(...P.S)+P.deadline} lines={CREWS.map((c,i)=>({S:P.S[i],D:PJ/P.rate[i],c:c.c,dash:true}))} bands={bands}
+          paths={CREWS.map((c,i)=>({pts:clip(res.tr[i]),c:c.c,drag:ph==='fix'?dragFor(i):null}))} upto={ph==='fix'?t:null} hits={ph==='fix'?res.conflicts:null} cursor={ph==='ready'||ended?null:t}/></div>}
+    </div>
+    {ended?<><FinalSchedule P={P} res={res}/><FinalBudget P={P} res={res} picks={picks} borrows={borrows} budget={budget}/></>:<FinalSchedule P={P} res={res} title={'📋 Revised schedule · Day '+t.toFixed(1)}/>}
+  </Split>);
+}
+function R21(p){return <RiskLevel {...p} evs={[0]} lvl="2.1"/>}
+function R22(p){return <RiskLevel {...p} evs={[1]} lvl="2.2"/>}
+function R23(p){return <RiskLevel {...p} evs={[2]} lvl="2.3"/>}
+function R24(p){return <RiskLevel {...p} evs={[0,1,2]} extraDays={1} lvl="2.4"/>}
+const COMPS=[M1,M2,M3,M4,M5,M6,R21,R22,R23,R24];
+
+/* ===== SCREENS ===== */
+function Level({i,onDone}){
+  const [m,setM]=useState(0);const [intro,setIntro]=useState(true);const mRef=useRef(0);mRef.current=m;
+  const miss=useCallback(()=>{setM(x=>x+1);DL.inc('mistakes');DL.ev('mistake');Snd.bad()},[]);
+  useState(()=>{DL.begin(i);return 1});   /* start the attempt before child effects run */
+  useEffect(()=>()=>{if(DL.cur&&DL.cur.i===i)DL.end('quit')},[]);
+  const done=useCallback(st=>{const s2=typeof st==='number'?st:null;if(DL.cur&&DL.cur.i===i)DL.end('complete',{stars:s2!=null?Math.max(1,s2):Math.max(1,3-mRef.current)});onDone(i,mRef.current,s2)},[i,onDone]);
+  const S=STEPS[i],C=COMPS[i],hats=3-Math.min(m,2);
+  return(<main className="wrap wide level">
+    <div className="lbar"><span className="lname">{S.stage===2?'Stage 2 · '+S.n:'Training '+S.n} · {S.name}</span>{S.stage!==2&&<span className="chip" aria-label={hats+' hard hats'}>{'⛑️'.repeat(hats)}{'·'.repeat(3-hats)}</span>}</div>
+    <StepCtx.Provider value={S}><C miss={miss} done={done}/></StepCtx.Provider>
+    {intro&&<div className="ov"><div className="panel"><div className="lv">{S.stage===2?'STAGE 2 · EVENT '+S.n:'TRAINING '+S.n}</div><h3>{S.name}</h3>
+      <div className="guide mission" style={{textAlign:'left'}}><h4>🎯 Your mission</h4><p>{S.mission}</p></div>
+      <div className="guide learn" style={{textAlign:'left'}}><h4>🎓 What you will learn</h4><p>{S.learn}</p></div>
+      <div className="row"><button className="go" autoFocus onClick={()=>{DL.mark('intro');setIntro(false)}}>▶ Play</button></div></div></div>}
+  </main>);
+}
+function Result({r,onNext,onMap,onReplay}){
+  const S=STEPS[r.i];
+  return(<div className="ov"><div className="panel"><div className="lv">{S.stage===2?'EVENT '+S.n+' CLEAR':'TRAINING '+S.n+' CLEAR'}</div><h3>{S.name}</h3>
+    <div className="bigstars">{[0,1,2].map(j=><span key={j} className={j<r.stars?'':'off'}>★</span>)}</div>
+    <div className="guide why" style={{textAlign:'left'}}><h4>✅ What you learned</h4><p><b>{S.ins}</b></p><p>{S.learned}</p></div>
+    <div className="row"><button className="go ghost" onClick={onReplay}>↺ Replay</button><button className="go ghost" onClick={onMap}>🗺 Map</button><button className="go" onClick={onNext}>{r.i<NM-1?'Next ▶':'🏁 Done'}</button></div>
+  </div></div>);
+}
+const MAPSTAGES=[{tag:'Stage 1',ttl:'Plan the work',ids:[0,1,2,3,4,5]},{tag:'Stage 2',ttl:'When the site bites',ids:[6,7,8,9]}];
+function MapScreen({prog,onPlay}){
+  let u=0;while(u<NM&&prog.stars[u]>0)u++;
+  return(<main className="wrap">{MAPSTAGES.map(G=><div key={G.tag} className="stage" style={{marginBottom:16}}><h2><span className="tag">{G.tag}</span>{G.ttl}</h2>
+    <div className="path">{G.ids.map(i=>{const S=STEPS[i],st=i<u?'done':i===u?'next':'locked';return(
+      <button key={i} className={'node '+st} disabled={st==='locked'} onClick={()=>onPlay(i)}>
+        <span className="ball">{st==='locked'?'🔒':S.n}</span><span className="nm">{S.name}</span>
+        <span className="stars">{[0,1,2].map(j=><span key={j} className={j<prog.stars[i]?'':'off'}>★</span>)}</span></button>)})}</div>
+  </div>)}</main>);
+}
+function Help({onClose}){return(<div className="ov"><div className="panel"><h3>How to play</h3>
+  <div className="steps3"><div><span className="ico">🎯</span>Read your mission</div><div><span className="ico">🖐</span>Drag, plot, run</div><div><span className="ico">🎓</span>Learn why it works</div></div>
+  <div className="tip">⛑️ Wrong moves cost a hard hat. Hats left = stars.</div>
+  <div className="tip">Curious? Tap <span className="info static">i</span> next to any term to learn what it means and why it matters.</div>
+  <div className="row"><button className="go" onClick={onClose}>Got it</button></div></div></div>)}
+
+function PidAsk({cur,onSave,onCancel}){const [v,setV]=useState(cur||'');const ok=v.trim().length>=2;
+  return(<div className="ov"><form className="panel" onSubmit={e=>{e.preventDefault();if(ok)onSave(v.trim())}}><h3>👤 Participant code</h3>
+    <p style={{textAlign:'left'}}>Type the code you were given (your SGID). It keeps your answers anonymous.</p>
+    <input className="pidin" autoFocus value={v} onChange={e=>setV(e.target.value)} placeholder="e.g. SG024" aria-label="Participant code" maxLength={32}/>
+    {cur&&v.trim()&&v.trim()!==cur&&<div className="tip">⚠ A new code starts the game from the beginning on this device.</div>}
+    <div className="row">{onCancel&&<button type="button" className="go ghost" onClick={onCancel}>Cancel</button>}<button className="go" disabled={!ok}>Start ▶</button></div></form></div>)}
+function App({init}){
+  const [prog,setProg]=useState(()=>init.prog||loadProg()||fresh());
+  const [screen,setScreen]=useState('map');const [lvl,setLvl]=useState(0);const [run,setRun]=useState(0);
+  const [pid,setPid]=useState(DL.pid);const [askId,setAskId]=useState(()=>!!DL.url&&!DL.pid);
+  const [result,setResult]=useState(null);const [help,setHelp]=useState(()=>!(init.prog||loadProg()||{}).seenHelp);const [sound,setSound]=useState(true);
+  Snd.on=sound;const progRef=useRef(prog);progRef.current=prog;
+  useEffect(()=>{saveProg(prog);window.__rushState={prog}},[prog]);
+  useEffect(()=>{window.scrollTo(0,0);document.body.classList.toggle('fit',screen==='level')},[screen,lvl,run]);
+  const onDone=useCallback((i,mistakes,st)=>{const stars=st!=null?Math.max(1,st):Math.max(1,3-mistakes),p=progRef.current;
+    const n={...p,stars:p.stars.slice()};n.stars[i]=Math.max(p.stars[i],stars);progRef.current=n;setProg(n);setResult({i,stars});Snd.star();confetti()},[]);
+  const play=i=>{setLvl(i);setRun(r=>r+1);setResult(null);setScreen('level')};
+  const toMap=()=>{setResult(null);setScreen('map')};
+  return(<>
+    <header className="top"><div className="wrap"><button className="logo" onClick={toMap}>Pipeline <span>Rush</span></button><div className="sp"/>
+      {DL.url&&<button className="ibtn pid" onClick={()=>setAskId(true)} aria-label="Participant code">👤 {pid||'—'}</button>}
+      <button className="ibtn" onClick={()=>setSound(!sound)} aria-pressed={sound} aria-label="Sound">{sound?'🔊':'🔇'}</button>
+      <button className="ibtn" onClick={()=>setHelp(true)} aria-label="How to play">?</button>
+      <button className="ibtn" onClick={toMap}>🗺 Map</button></div><div className="hazard"/></header>
+    {screen==='map'&&<MapScreen prog={prog} onPlay={play}/>}
+    {screen==='level'&&<Level key={lvl+'-'+run} i={lvl} onDone={onDone}/>}
+    {result&&<Result r={result} onReplay={()=>play(result.i)} onMap={toMap} onNext={()=>{if(result.i<NM-1)play(result.i+1);else toMap()}}/>}
+    {help&&!askId&&<Help onClose={()=>{setHelp(false);setProg(p=>({...p,seenHelp:true}))}}/>}
+    {askId&&<PidAsk cur={pid} onSave={code=>{const changed=code!==pid;DL.setPid(code);setPid(code);setAskId(false);
+      if(changed&&pid){/* new participant on this device: start from a clean slate */
+        try{['pipelineRush.t5plan','pipelineRush.t6plan'].forEach(k=>localStorage.removeItem(k))}catch(e){}window.__t5plan=null;window.__t6plan=null;
+        const f=fresh();progRef.current=f;setProg(f);setScreen('map');setResult(null);setHelp(true)}}} onCancel={pid?()=>setAskId(false):null}/>}
+    <Ghost/>
+  </>);
+}
+const root=ReactDOM.createRoot(document.getElementById('root'));
+function start(data){root.render(<App init={data||{}}/>)}
+try{window.claude?.hot?.snapshot?.(()=>window.__rushState||{})}catch(e){}
+window.claude?.hot?.ready?window.claude.hot.ready(start):start(window.claude?.hot?.data??{});
+
+
+</script>
+
+</body></html>
