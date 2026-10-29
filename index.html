@@ -973,7 +973,8 @@ function logInfo(k){try{const K='pipelineRush.info',x=JSON.parse(localStorage.ge
    No URL → nothing is sent and no participant code is asked (demo mode). */
 const LVL_ID=['T1','T2','T3','T4','T5','T6','2.1','2.2','2.3','2.4'];
 const CK=['exc','pipe','back'];
-const DL={ver:'pipeline-rush 2026-10-28',
+const DL={ver:'pipeline-rush 2026-10-28b',
+  images:false,   /* false = no PNG is sent (saves Drive space); the plot can be redrawn from the schedule columns */
   url:(()=>{let u='';try{u=new URLSearchParams(location.search).get('log')||''}catch(e){}u=u||window.RUSH_LOG_URL||'';return /^https:\/\//.test(u)?u:''})(),
   pid:(()=>{try{const q=new URLSearchParams(location.search).get('pid');if(q)return q.trim()}catch(e){}try{return localStorage.getItem('pipelineRush.pid')||''}catch(e){return ''}})(),
   sid:Date.now().toString(36)+Math.random().toString(36).slice(2,6),
@@ -994,7 +995,7 @@ const DL={ver:'pipeline-rush 2026-10-28',
     const row={pid:this.pid||'(none)',session:this.sid,level:c.lv,attempt:c.attempt,status,start:new Date(c.t0).toISOString(),end:new Date(now).toISOString(),
       seconds:Math.round((now-c.t0)/100)/10,mistakes:0,...c.n,...c.sum,...(extra||{}),
       info_topics:Object.entries(c.info).map(([k,v])=>k+'×'+v).join(' '),screen:innerWidth+'x'+innerHeight,version:this.ver};
-    const pack={row,events:c.ev.map(e=>({pid:row.pid,session:row.session,level:row.level,attempt:row.attempt,...e})),image:c.img};
+    const pack={row,events:c.ev.map(e=>({pid:row.pid,session:row.session,level:row.level,attempt:row.attempt,...e})),image:this.images?c.img:null};
     const bk=this._ls('pipelineRush.data',[]);bk.push({row,events:pack.events});this._ss('pipelineRush.data',bk.slice(-200));
     (window.__dl=window.__dl||[]).push(pack);this.send(pack,status==='quit');return row},
   send(pack,leaving){if(!this.url)return;let body=JSON.stringify(pack);
@@ -1702,7 +1703,8 @@ function RiskLevel({evs,extraDays=0,done,lvl}){
     if(nextT!=null&&t>=nextT-1e-6){const e=pending[0];setFired(f=>[...f,e]);setCur(e);setSel(null);setM({L:null,j:null});setPh('event');lg.current.evT=DL.secs();DL.ev('event',{event:R2EV[e].id,name:R2EV[e].name,day:+t.toFixed(2)});Snd.alarm()}
     else if(nextT==null&&t>=endT-1e-6){setPh('end');r2log({lvl,ev:'end',total:res.total,dur:res.dur,late:res.late,pass:ok,picks:{...picks},borrows:{...borrows},extra,plan:P.sel});
       DL.set({...schedCols(CREWS.map((c,i)=>({rate:P.rate[i],dc:P.cost[i],S:res.S[i],E:res.E[i],wait:res.wait[i],fleet:fleetTxt(P.sel[i])}))),duration:res.dur,late_days:res.late,late_fee:res.ld,
-        direct:res.b.direct,indirect:res.b.ind,profit:res.b.pr,fees:res.fees,total:res.total,budget_left:left,met_days:res.late===0,met_cost:ok});
+        direct:res.b.direct,indirect:res.b.ind,profit:res.b.pr,fees:res.fees,total:res.total,budget_left:left,met_days:res.late===0,met_cost:ok,
+        ...Object.fromEntries(CK.map((k,i)=>[k+'_lob_path',res.tr[i].filter((z,n,a)=>n===0||n===a.length-1||Math.abs((z.x-a[n-1].x)-(a[n+1].x-z.x))>1e-6).map(z=>+z.t.toFixed(2)+':'+Math.round(z.x)).join(' ')]))});
       DL.snap(snapPNG({title:'Stage 2 · '+lvl+' · '+(ok?'within budget':'over budget'),sub:'Participant '+(DL.pid||'—')+' · attempt '+(DL.cur?DL.cur.attempt:'')+' · '+res.dur+' days · '+money(res.total)+' of '+money(budget),
         tMax,deadline:Math.min(...P.S)+P.deadline,crews:CREWS.map((c,i)=>({tag:c.tag,c:c.c,rate:P.rate[i],S:res.S[i],E:res.E[i],red:res.segs[i].filter(g=>g.red),
           pts:res.tr[i].map(z=>[z.t,z.x]),plan:[[P.S[i],0],[P.S[i]+PJ/P.rate[i],PJ]]}))}));
