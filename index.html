@@ -258,13 +258,32 @@ button.cchip{cursor:pointer}
 .tbl tr.segtot td{font-weight:800; border-top:1px solid var(--line)}
 .r2opt.off{opacity:.55; cursor:not-allowed}
 .pills{display:inline-flex; border-radius:12px; overflow:hidden; border:2px solid var(--line)}
-.pills span{padding:6px 12px; font-weight:900; font-size:14px; background:var(--card)}
-.pills span.on{background:var(--char); color:#fff}
-.pills span.ok{color:var(--good)}
+.pills span,.pills button{padding:6px 12px; font-weight:900; font-size:14px; background:var(--card)}
+.pills .on{background:var(--char); color:#fff}
+.pills .ok{color:var(--good)}
 
 /* overlays */
 .ov{position:fixed; inset:0; background:rgba(15,25,30,.55); display:grid; place-items:center; z-index:20; padding:16px}
 .pidin{width:100%; font:inherit; font-size:20px; font-weight:800; padding:10px 12px; border:2px solid var(--line,#ccc); border-radius:12px; margin:6px 0 10px; text-align:center; letter-spacing:.04em}
+.pidgrid{display:grid;grid-template-columns:1fr 1fr;align-items:end;gap:12px;text-align:left;font-weight:800;font-size:14px}
+.pidgrid .pidin{margin-top:4px}
+@media(max-width:520px){.pidgrid{grid-template-columns:1fr}}
+.pidout{margin:2px 0 4px;font-size:16px}
+.s3grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0}
+.s3f{border:2px solid var(--line,#ddd);border-radius:12px;padding:8px 10px;display:flex;flex-direction:column;gap:2px}
+.s3f b{font-size:13px}.s3f small{color:var(--soft);font-size:11.5px}.s3r{font-weight:900;font-size:15px}
+.s3f.rV{border-color:#E63946;background:rgba(230,57,70,.08)}.s3f.rV .s3r{color:#E63946}.s3f.rH{border-color:#F4A261;background:rgba(244,162,97,.1)}.s3f.rH .s3r{color:#d9822b}
+.s3f.rM .s3r{color:#b08900}.s3f.rL .s3r{color:#2A9D8F}
+.s3ev{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.s3e{border:2px solid var(--line,#ddd);border-radius:12px;padding:8px 10px;display:flex;flex-direction:column;gap:3px}
+.s3e small{font-size:11.5px}.s3e.on{border-color:var(--amber,#FFB703);background:rgba(255,183,3,.1)}
+.s3e.pick{font:inherit;text-align:left;background:none;cursor:pointer;color:inherit}.s3e.pick:disabled{cursor:default;opacity:.75}.s3e.top{opacity:1!important;border-color:#2a9d8f;background:rgba(42,157,143,.14);box-shadow:0 0 0 2px #2a9d8f}.s3e.on.top{opacity:1}.s3e.on{opacity:1!important}
+.s3odds{font-size:11.5px;font-weight:800;border-radius:8px;padding:2px 6px;align-self:flex-start}.s3odds.rV{background:#e63946;color:#fff}.s3odds.rH{background:#f4a261}.s3odds.rM{background:#ffd166}.s3odds.rL{background:#cfe8d5}
+.charts.s3charts svg.lob{width:100%;height:auto;max-height:none}.pills button.tap{font:inherit;border:0;cursor:pointer;text-decoration:underline dotted}.pills button.tap:hover{filter:brightness(.95)}.s3charts svg.lob .grab{touch-action:none}
+.s3crew.hi{box-shadow:0 0 0 3px #e63946}.s3hi{align-self:flex-start;background:#e63946;color:#fff;font-weight:900;font-size:11.5px;border-radius:8px;padding:2px 8px}.s3risk{font-size:11.5px}
+.s3flag{all:unset;cursor:pointer;font-weight:900}.s3e select{font:inherit;font-size:12px;padding:3px;border-radius:8px}
+.s3crews{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.s3crew{border:2px solid var(--tc);border-radius:12px;padding:8px;display:flex;flex-direction:column;gap:4px}
+.s3m{gap:6px;font-size:12.5px}.s3m small{color:var(--soft)}.s3parts{display:block;width:100%;font-weight:700;opacity:.85}
+@media(max-width:700px){.s3grid,.s3crews,.s3ev{grid-template-columns:1fr}}
 .ibtn.pid{width:auto; padding:0 10px; font-size:13px; font-weight:800}
 .panel{background:var(--card); border-radius:24px; padding:22px; width:min(560px,100%); max-height:94vh; overflow:auto; box-shadow:0 20px 60px rgba(0,0,0,.35); display:grid; gap:14px; text-align:center; animation:rise .3s}
 .panel h3{margin:0; font-size:28px; font-weight:900}
@@ -886,9 +905,9 @@ function confetti(){const cols=['#FFB703','#E63946','#2A9D8F','#1D6FB8','#264653
   for(let i=0;i<70;i++){const d=document.createElement('div');d.className='conf';d.style.left=Math.random()*100+'vw';d.style.background=cols[i%5];d.style.animationDelay=Math.random()*.5+'s';document.body.appendChild(d);setTimeout(()=>d.remove(),2600)}}
 
 /* ===== STORAGE ===== */
-const SKEY='pipelineRush.v5',NM=10;
+const SKEY='pipelineRush.v5',NM=11;
 const fresh=()=>({stars:Array(NM).fill(0),seenHelp:false});
-function loadProg(){try{const p=JSON.parse(localStorage.getItem(SKEY));if(p&&Array.isArray(p.stars)&&p.stars.length<=NM){while(p.stars.length<NM)p.stars.push(0);return p}}catch(e){}return null}
+function loadProg(){try{const p=JSON.parse(localStorage.getItem(SKEY));if(p&&Array.isArray(p.stars)){p.stars=p.stars.slice(0,NM);while(p.stars.length<NM)p.stars.push(0);return p}}catch(e){}return null}
 function saveProg(p){try{localStorage.setItem(SKEY,JSON.stringify(p))}catch(e){}}
 
 /* ===== TRAININGS ===== */
@@ -924,26 +943,31 @@ const STEPS=[
    learn:'How to balance speed, cost and spacing to meet a real contract target.',
    learned:'A deadline is not met just by buying the fastest machines. Faster crews cost more per day but work fewer days, and how close each crew can start behind the one ahead depends on their speeds. Every choice moves time and money together — planning means finding the mix that satisfies both.',
    ins:'Speed, cost and spacing — balance all three.'},
-  {n:'2.1',stage:2,name:'Rock refusal',
-   mission:'Run your Training 6 plan. When the excavator hits rock, pick a response, then watch what it does to every crew. Finish within the budget; each day past the deadline costs $1,000.',
-   learn:'How a slowdown bends a crew’s line, and how a delay up front ripples to the crews behind it.',
-   learned:'A slowdown makes a crew’s line flatter for a few days. If the crew behind is faster, it catches up and has to wait — and you still pay it. Every response moves the cost somewhere: into days, into dollars, or into another crew’s schedule.',
+  {n:'2.1',stage:2,name:'Excavation hits trouble',
+   mission:'Run your Training 6 plan. Excavation meets a buried utility, then hard rock. Pick a response each time and finish within the budget; each day past the deadline costs $1,000.',
+   learn:'How a slowdown in the first crew bends its line and ripples to every crew behind it.',
+   learned:'A slowdown makes a crew’s line flatter for a few days. The crews behind are faster, so they catch up and must wait — and you still pay them. Every response moves the cost somewhere: into days, into dollars, or into another crew’s schedule.',
    ins:'No free fix — you only choose who pays.'},
-  {n:'2.2',stage:2,name:'Trench collapse',
-   mission:'Run the plan. When the trench collapses, Pipe laying stops. Choose how to get it moving again and finish within the budget.',
-   learn:'Why a stop in the middle crew is so expensive, and how buffer protects the crew behind.',
-   learned:'When a crew stops, its line goes flat but you keep paying it. The crew behind only stays clear because of the buffer you planned. Paying to fix the cause quickly is often cheaper than waiting it out.',
+  {n:'2.2',stage:2,name:'Pipe laying in trouble',
+   mission:'Run the plan. Pipe laying meets a trench collapse, a late delivery and a rigging failure. Keep the crews apart and finish within the budget.',
+   learn:'Why trouble in the middle crew is so expensive, and the choice between paying, waiting and slowing the others to match.',
+   learned:'When the middle crew slows, the crew behind runs into it unless you pause it, delay it or slow it to match. A stopped crew still costs money, so paying to fix the cause is often cheaper than waiting.',
    ins:'A stopped crew still costs money.'},
-  {n:'2.3',stage:2,name:'Poor compaction',
-   mission:'Run the plan. When a density test fails, Backfill slows down. Pick the cheapest way through and finish within the budget.',
-   learn:'How a delay at the last crew is different, and how to use a finished crew’s machines.',
-   learned:'The last crew has no one behind it, so its delay only moves the finish date. A crew that has already finished has machines standing idle — borrowing them is almost free.',
-   ins:'Look for idle resources before you buy new ones.'},
-  {n:'2.4',stage:2,name:'All three',
-   mission:'All three events hit one run. Respond to each as it happens and finish within the budget (it includes a $1,500 risk allowance).',
+  {n:'2.3',stage:2,name:'Backfill fails a test',
+   mission:'Run the plan. A compaction test fails behind the backfill crew. Pick the cheapest way through and finish within a tight budget.',
+   learn:'How a delay at the last crew differs: it moves only the finish date.',
+   learned:'The last crew has no one behind it, so its delay only moves the finish date and its own cost. Small problems at the end can be cheapest to absorb, but only if there is money and time left.',
+   ins:'Match the fix to the size of the problem.'},
+  {n:'2.4',stage:2,name:'Mixed run',
+   mission:'Four events from the library hit one run: rock, a late delivery, extreme weather and a failed compaction test. Respond to each and finish within the budget.',
    learn:'How choices add up when problems stack, and where spending saves the most.',
-   learned:'Disruptions stack. Cheap answers early leave money for the event that really needs paying for. Comparing planned and actual as you go shows where the schedule is slipping before it is too late.',
-   ins:'Spend where it saves the most.'}];
+   learned:'Disruptions stack. Cheap answers early leave money for the event that really needs paying for. Watching the revised schedule as you go shows where the job is slipping before it is too late.',
+   ins:'Spend where it saves the most.'},
+  {n:'3',stage:3,name:'Run the job',
+   mission:'You are the project scheduler for a 3-mile pipeline at a randomly drawn site. Read the site’s hazard card, flag the risks you expect, design the crews with buffers and a contingency, then run the job. Finish within 55 days and $650,000. If you miss, revise the design and try again: same site, new events.',
+   learn:'How to read a site’s risks before planning, and how buffers and contingency make a schedule that survives them.',
+   learned:'A schedule that only fits the caps on paper breaks at the first event. Reading the site tells you which risks to plan for; cheaper crews with built-in gaps and money held back absorb them; and paying for a fix is worth it only where it saves more than it costs.',
+   ins:'Plan for the place, not just the numbers.'}];
 
 
 /* ===== INFO BOXES · tap ⓘ to learn more (opens are counted for research) ===== */
@@ -971,10 +995,10 @@ function logInfo(k){try{const K='pipelineRush.info',x=JSON.parse(localStorage.ge
 /* ===== DATA LOG · one row per level attempt → Google Sheet (Apps Script web app) =====
    Set the web-app URL in index.html (window.RUSH_LOG_URL) or add ?log=<url> to the page link.
    No URL → nothing is sent and no participant code is asked (demo mode). */
-const LVL_ID=['T1','T2','T3','T4','T5','T6','2.1','2.2','2.3','2.4'];
+const LVL_ID=['T1','T2','T3','T4','T5','T6','2.1','2.2','2.3','2.4','3'];
 const CK=['exc','pipe','back'];
-const DL={ver:'pipeline-rush 2026-10-28b',
-  images:false,   /* false = no PNG is sent (saves Drive space); the plot can be redrawn from the schedule columns */
+const DL={ver:'pipeline-rush 2026-10-28c',
+  images:true,    /* PNG of bar chart + LOB goes into the Sheet row (no Drive files) */
   url:(()=>{let u='';try{u=new URLSearchParams(location.search).get('log')||''}catch(e){}u=u||window.RUSH_LOG_URL||'';return /^https:\/\//.test(u)?u:''})(),
   pid:(()=>{try{const q=new URLSearchParams(location.search).get('pid');if(q)return q.trim()}catch(e){}try{return localStorage.getItem('pipelineRush.pid')||''}catch(e){return ''}})(),
   sid:Date.now().toString(36)+Math.random().toString(36).slice(2,6),
@@ -992,20 +1016,38 @@ const DL={ver:'pipeline-rush 2026-10-28b',
   info(k){const c=this.cur;if(c){c.info[k]=(c.info[k]||0)+1;this.inc('info_opens');this.ev('info',{topic:k})}},
   snap(img){if(this.cur)this.cur.img=img},
   end(status,extra){const c=this.cur;if(!c)return null;this.ev('end',{status});this.cur=null;const now=Date.now();
-    const row={pid:this.pid||'(none)',session:this.sid,level:c.lv,attempt:c.attempt,status,start:new Date(c.t0).toISOString(),end:new Date(now).toISOString(),
+    const row={log_id:Date.now().toString(36)+Math.random().toString(36).slice(2,8),pid:this.pid||'(none)',session:this.sid,level:c.lv,attempt:c.attempt,status,start:new Date(c.t0).toISOString(),end:new Date(now).toISOString(),
       seconds:Math.round((now-c.t0)/100)/10,mistakes:0,...c.n,...c.sum,...(extra||{}),
       info_topics:Object.entries(c.info).map(([k,v])=>k+'×'+v).join(' '),screen:innerWidth+'x'+innerHeight,version:this.ver};
     const pack={row,events:c.ev.map(e=>({pid:row.pid,session:row.session,level:row.level,attempt:row.attempt,...e})),image:this.images?c.img:null};
     const bk=this._ls('pipelineRush.data',[]);bk.push({row,events:pack.events});this._ss('pipelineRush.data',bk.slice(-200));
-    (window.__dl=window.__dl||[]).push(pack);this.send(pack,status==='quit');return row},
-  send(pack,leaving){if(!this.url)return;let body=JSON.stringify(pack);
-    if(leaving&&body.length>60000){body=JSON.stringify({...pack,image:null})}
-    try{fetch(this.url,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body,keepalive:!!leaving}).catch(()=>{})}catch(e){}}
+    (window.__dl=window.__dl||[]).push(pack);this.send(pack,!!this.leaving);return row},
+  /* send queue: every row waits in this browser until a send goes through (Wi-Fi drops, tab closed…).
+     Each row has a one-time log_id and the Sheet skips ids it already has, so a resend never duplicates. */
+  QK:'pipelineRush.queue',sending:new Set(),
+  readQ(){return this._ls(this.QK,[])},
+  writeQ(q){q=q.slice(-30);for(let k=0;k<=q.length;k++){try{localStorage.setItem(this.QK,JSON.stringify(q));return}catch(e){const j=q.findIndex(x=>x.image);if(j<0)break;q[j]={...q[j],image:null}}}},
+  send(pack,leaving){if(!this.url)return;this.writeQ(this.readQ().concat([pack]));
+    if(leaving){let body=JSON.stringify(pack);if(body.length>60000)body=JSON.stringify({...pack,image:null});
+      try{fetch(this.url,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body,keepalive:true}).catch(()=>{})}catch(e){}return}   /* stays queued; resent (and de-duplicated) next visit */
+    this.flush()},
+  async flush(){if(!this.url)return;
+    for(const item of this.readQ()){const id=item.row&&item.row.log_id;if(!id||this.sending.has(id))continue;this.sending.add(id);
+      try{await fetch(this.url,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(item)});
+        this.writeQ(this.readQ().filter(x=>!(x.row&&x.row.log_id===id)))}
+      catch(e){/* offline: keep it for the next try */}
+      finally{this.sending.delete(id)}}},
+  pending(){return this.readQ().length}
 };
-window.addEventListener('pagehide',()=>{if(DL.cur)DL.end('quit')});
+window.addEventListener('pagehide',()=>{DL.leaving=true;if(DL.cur)DL.end('quit')});
+window.addEventListener('pageshow',()=>{DL.leaving=false});
+window.addEventListener('online',()=>DL.flush());
+setTimeout(()=>DL.flush(),1500);
 /* schedule → flat columns: exc_rate, exc_cost_per_day, exc_start, exc_end, exc_days, exc_cost … */
 function schedCols(rows){const o={};rows.forEach((r,i)=>{const k=CK[i];o[k+'_rate']=r.rate;o[k+'_cost_per_day']=r.dc;o[k+'_start']=r.S;o[k+'_end']=r.E;o[k+'_days']=r.E-r.S;o[k+'_cost']=Math.round((r.E-r.S)*r.dc);
     if(r.wait!=null)o[k+'_stopped_days']=+r.wait.toFixed(1);if(r.fleet)o[k+'_machines']=r.fleet});return o}
+/* the LOB as numbers, like the IGLC game's "LOB data" column */
+const lobData=(plan,rates,paths)=>JSON.stringify(CREWS.map((c,i)=>({crew:c.tag,start:plan[i].S,end:plan[i].S+plan[i].D,rate:rates[i],...(paths?{path:paths[i]}:{})})));
 /* LOB + bar chart picture of what the player built (drawn from the data, so it matches the plan exactly) */
 function snapPNG({title,sub,tMax,deadline,crews,hits}){
   const col=c=>{const m=/^var\((--[\w-]+)\)$/.exec(c||'');if(!m)return c;const v=getComputedStyle(document.documentElement).getPropertyValue(m[1]).trim();return v||'#555'};
@@ -1064,7 +1106,8 @@ function useClock(){
 function Banner({m}){if(!m)return null;return(<div key={m.n||0} className={'banner '+m.k+(m.k==='bad'?' shake':'')} role="status">{m.t}</div>)}
 function Stats({items}){return(<div className="hud">{items.map((s,i)=>(<div key={i} className={'stat '+(s.k||'')}><small>{s.l}</small><span className="num">{s.v}</span></div>))}</div>)}
 function Legend(){return(<div className="legend">{CREWS.map(c=><span key={c.k}><i style={{background:c.c}}/>{c.ic} {c.tag}</span>)}</div>)}
-function Pills({items,cur}){return(<span className="pills">{items.map((x,i)=><span key={i} className={cur===i?'on':cur>i?'ok':''}>{cur>i?'✓ ':''}{x}</span>)}</span>)}
+function Pills({items,cur,onPick,can}){return(<span className="pills">{items.map((x,i)=>{const cls=cur===i?'on':cur>i?'ok':'';const tap=onPick&&i!==cur&&(!can||can(i));
+  return tap?<button type="button" key={i} className={cls+' tap'} onClick={()=>onPick(i)}>{cur>i?'✓ ':''}{x}</button>:<span key={i} className={cls}>{cur>i?'✓ ':''}{x}</span>})}</span>)}
 
 /* pointer drag & drop */
 const DND={zones:new Map(),setGhost:null};
@@ -1083,14 +1126,14 @@ function Ghost(){const [g,setG]=useState(null);DND.setGhost=setG;return g?(<div 
 
 /* live 3D site card (right) with optional player bar and camera views */
 const CAMS=[['over','🎥 Overview'],[0,'🚜 Excavation'],[1,'🏗️ Pipe laying'],[2,'🚛 Backfill']];
-function Site({ft=[0,0,0],st=['off','off','off'],qty,focus=null,clock='',clash:cl=null,player=null,alert=null}){
+function Site({ft=[0,0,0],st=['off','off','off'],qty,focus=null,clock='',clash:cl=null,player=null,alert=null,len=PJ}){
   const cv=useRef(null);const [cam,setCam]=useState(focus==null?'over':focus);const [,bump]=useState(0);
   useEffect(()=>{window.__s3fail=()=>bump(x=>x+1);return()=>{window.__s3fail=null}},[]);
   useEffect(()=>{if(focus!=null)setCam(focus)},[focus]);
   useEffect(()=>{try{S3.sync(cv.current,{ft,st,qty,cam})}catch(e){console.warn(e)}});
   const ok=S3.supported();
   return(<div className="rcol"><div className="sitecard">
-    <div className="sitehd"><span className="ttl">🏗 3D site · 300 ft</span><span className="clock">{clock}</span></div>
+    <div className="sitehd"><span className="ttl">🏗 3D site · {len===PJ?'300 ft':(len/5280)+' miles'}</span><span className="clock">{clock}</span></div>
     <div className="sitewrap">
       <div className="cv" ref={cv}/>
       {!ok&&<div className="no3d"><div><b>The 3D site needs WebGL.</b><br/>{S3.why()||'WebGL is not available.'}<br/>In Chrome: Settings → System → “Use graphics acceleration when available”, then reload.</div></div>}
@@ -1106,7 +1149,7 @@ function Site({ft=[0,0,0],st=['off','off','off'],qty,focus=null,clock='',clash:c
     </div>
     <div className="camsw" role="group" aria-label="Camera view">{CAMS.map(([k,l])=><button key={k} className={cam===k?'on':''} onClick={()=>setCam(k)}>{l}</button>)}</div>
     <div className="crewchips">{CREWS.map((c,i)=>{const s=st[i];if(s==='off')return null;
-      return <span key={c.k} className={'cchip '+s}>{c.ic} {c.tag} · {Math.round(ft[i])} ft</span>})}</div>
+      return <span key={c.k} className={'cchip '+s}>{c.ic} {c.tag} · {Math.round(ft[i]*len/PJ).toLocaleString('en-US')} ft</span>})}</div>
   </div></div>);
 }
 
@@ -1120,7 +1163,7 @@ function Split({site,compact,noMission,children}){const S=React.useContext(StepC
 
 /* LOB chart (fills the space it is given) */
 function svgPoint(svg,e){const p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;const m=svg.getScreenCTM();return m?p.matrixTransform(m.inverse()):null}
-function Lob({tMax=16,lines=[],points=[],ring=null,hit=null,cursor=null,onPick,drag=null,attempt=null,deadline=null,note=null,bands=null,paths=null,upto=null,hits=null}){
+function Lob({tMax=16,lines=[],points=[],ring=null,hit=null,cursor=null,onPick,drag=null,attempt=null,deadline=null,note=null,bands=null,paths=null,upto=null,hits=null,ylab=null,ftMul=1}){
   const ref=useRef(null),dr=useRef(null);
   const W=360,L=40,R=14,T=14,B=30,ph=200,H=T+ph+B,pw=W-L-R;
   const x=t=>L+t/tMax*pw,y=f=>T+ph-f/PJ*ph;
@@ -1135,10 +1178,10 @@ function Lob({tMax=16,lines=[],points=[],ring=null,hit=null,cursor=null,onPick,d
     <rect className="plot" x={L} y={T} width={pw} height={ph} rx="6"/>
     {vg.map(t=><line key={'v'+t} className={t%step===0?'g2':'g1'} x1={x(t)} x2={x(t)} y1={T} y2={T+ph}/>)}
     {hg.map(f=><line key={'h'+f} className={f%75===0?'g2':'g1'} x1={L} x2={L+pw} y1={y(f)} y2={y(f)}/>)}
-    {[0,75,150,225,300].map(f=><text key={'y'+f} className="ax" x={L-5} y={y(f)+3.5} textAnchor="end">{f}</text>)}
+    {(ylab||[0,75,150,225,300].map(f=>[f,f])).map(([f,lb])=><text key={'y'+f} className="ax" x={L-5} y={y(f)+3.5} textAnchor="end">{lb}</text>)}
     {xt.map(t=><text key={'x'+t} className="ax" x={x(t)} y={T+ph+13} textAnchor="middle">{t}</text>)}
     <text className="axt" x={L+pw} y={H-4} textAnchor="end">DAY →</text>
-    <text className="axt" x={L+4} y={T+10} textAnchor="start">FT ↑</text>
+    <text className="axt" x={L+4} y={T+10} textAnchor="start">{ylab?'MILES ↑':'FT ↑'}</text>
     {bands&&bands.map((b,i)=><g key={'b'+i}><rect className="evband" x={x(b.a)} y={T} width={x(b.b)-x(b.a)} height={ph}/><text className="evlab" x={x(b.a)+3} y={T+10+i*11}>{b.label}</text></g>)}
     {deadline!=null&&deadline<=tMax&&<g><line className="dline" x1={x(deadline)} x2={x(deadline)} y1={T} y2={T+ph}/><text className="dtxt" x={x(deadline)-3} y={T+ph-5} textAnchor="end">🎯 day {deadline}</text></g>}
     {note&&<text className={'notetxt'+(note.bad?' bad':'')} x={L+pw-4} y={T+12} textAnchor="end">{note.t}</text>}
@@ -1163,7 +1206,7 @@ function Lob({tMax=16,lines=[],points=[],ring=null,hit=null,cursor=null,onPick,d
         {done.length>1&&<polyline points={done.map(P).join(' ')} fill="none" style={{stroke:p.c}} strokeWidth="3.2" strokeLinejoin="round"/>}
         {segs.map((sg,k)=><polyline key={k} className="waitseg" points={sg.map(P).join(' ')}/>)}
         {last&&done.length>1&&<circle cx={x(last.t)} cy={y(last.x)} r="4.2" style={{fill:p.c,stroke:'var(--card)'}} strokeWidth="1.5"/>}
-        {p.drag&&<polyline className="grab" points={(fut.length>1?fut:p.pts).map(P).join(' ')} fill="none" style={{stroke:'transparent',pointerEvents:'stroke'}} strokeWidth="22"
+        {p.drag&&<polyline className="grab" data-crew={i} points={(fut.length>1?fut:p.pts).map(P).join(' ')} fill="none" style={{stroke:'transparent',pointerEvents:'stroke'}} strokeWidth="22"
           onPointerDown={ev=>{ev.stopPropagation();ref.current.setPointerCapture(ev.pointerId);dr.current={kind:'path',t0:tOf(ev),last:0,min:p.drag.min,max:p.drag.max,fn:p.drag.onMove}}}/>}
         {p.drag&&(()=>{const e2=p.pts[p.pts.length-1];return <text className="grabhint" x={x(e2.t)+4} y={y(e2.x)+14} style={{fill:p.c}}>↔</text>})()}
       </g>)})}
@@ -1174,15 +1217,34 @@ function Lob({tMax=16,lines=[],points=[],ring=null,hit=null,cursor=null,onPick,d
     {cursor!=null&&<g><line className="cur" x1={x(cursor)} x2={x(cursor)} y1={T} y2={T+ph}/>
       {lines.filter(l=>!l.dash&&!l.ghost&&cursor>=l.S).map((l,i)=><circle key={'c'+i} cx={x(cursor)} cy={y(ftAt(l.S,l.D,cursor))} r="4.5" style={{fill:l.c,stroke:'var(--card)'}} strokeWidth="1.5"/>)}</g>}
     {hits&&hits.map((h,i)=><g key={'hh'+i}><circle className="hit" cx={x(h.t)} cy={y(h.ft)} r="10"/>
-      <text className="hitlab" x={x(h.t)+(h.t>tMax-6?-14:14)} y={y(h.ft)+(h.ft>250?18:-12)} textAnchor={h.t>tMax-6?'end':'start'}>💥 {Math.round(h.ft)} ft · day {fmt(+h.t.toFixed(1))}</text></g>)}
+      <text className="hitlab" x={x(h.t)+(h.t>tMax-6?-14:14)} y={y(h.ft)+(h.ft>250?18:-12)} textAnchor={h.t>tMax-6?'end':'start'}>💥 {Math.round(h.ft*ftMul).toLocaleString('en-US')} ft · day {fmt(+h.t.toFixed(1))}</text></g>)}
     {hit&&<g><circle className="hit" cx={x(hit.t)} cy={y(hit.ft)} r="10"/>
       <text className="hitlab" x={x(hit.t)+(hit.t>tMax-6?-14:14)} y={y(hit.ft)+(hit.ft>250?18:-12)} textAnchor={hit.t>tMax-6?'end':'start'}>💥 {Math.round(hit.ft)} ft · day {fmt(hit.t)}</text></g>}
   </svg>);
 }
 
+/* bar chart drawn on the same x scale as Lob (W, L, R match), so bars line up with the LOB lines */
+function BarSvg({tMax,rows,deadline=null,drag=null,bad=[]}){
+  const ref=useRef(null),dr=useRef(null);const W=360,L=40,R=14,pw=W-L-R,rh=26,T=4,ph=rows.length*rh,H=T+ph+20;
+  const x=t=>L+t/tMax*pw;const tOf=e=>{const p=svgPoint(ref.current,e);return p?(p.x-L)/pw*tMax:null};
+  const step=tMax<=18?2:4,xt=[];for(let t=0;t<=tMax;t+=step)xt.push(t);
+  return(<svg ref={ref} viewBox={`0 0 ${W} ${H}`} className="lob barsvg" role="img" aria-label="Bar chart: start and end day of each crew"
+      onPointerMove={e=>{const d=dr.current;if(!d)return;const t=tOf(e);if(t==null)return;let s=Math.round(d.S0+t-d.t0);s=Math.max(d.min,Math.min(d.max,s));if(s!==d.last){d.last=s;drag.onMove(d.i,s)}}}
+      onPointerUp={()=>{dr.current=null}}>
+    <rect className="plot" x={L} y={T} width={pw} height={ph} rx="6"/>
+    {xt.map(t=><line key={'v'+t} className="g2" x1={x(t)} x2={x(t)} y1={T} y2={T+ph}/>)}
+    {xt.map(t=><text key={'x'+t} className="ax" x={x(t)} y={T+ph+13} textAnchor="middle">{t}</text>)}
+    {deadline!=null&&deadline<=tMax&&<line className="dline" x1={x(deadline)} x2={x(deadline)} y1={T} y2={T+ph}/>}
+    {rows.map((r,i)=>{const can=drag&&drag.idx.includes(i),yy=T+i*rh+4,E=r.S+r.D;return(<g key={i}>
+      <text x={L-6} y={yy+rh/2+1} textAnchor="end" fontSize="14">{r.ic}</text>
+      <rect x={x(r.S)} y={yy} width={x(E)-x(r.S)} height={rh-8} rx="5" style={{fill:r.c,stroke:bad.includes(i)?'var(--bad)':can?'#FFB703':'none',cursor:can?'grab':'default',touchAction:'none'}} strokeWidth={bad.includes(i)?3:2}
+        onPointerDown={can?e=>{e.stopPropagation();ref.current.setPointerCapture(e.pointerId);const lim=drag.lim[drag.idx.indexOf(i)];dr.current={i,S0:r.S,t0:tOf(e),min:lim[0],max:lim[1],last:r.S}}:undefined}/>
+      <text x={(x(r.S)+x(E))/2} y={yy+(rh-8)/2+4} textAnchor="middle" fontSize="10" fontWeight="800" fill="#fff" pointerEvents="none">{can?'↔ ':''}{r.S} → {E}</text></g>)})}
+  </svg>);
+}
 /* timeline (bar chart) */
 function Timeline({tMax,rows,onDropRow,onSlide,narrow,deadline}){
-  const ticks=[];for(let t=0;t<=tMax;t+=2)ticks.push(t);
+  const ticks=[];for(let t=0;t<=tMax;t+=tMax>30?5:2)ticks.push(t);
   return(<div className={'tl'+(narrow?' narrow':'')}>
     {rows.map((r,i)=>(<div key={i} className="tl-row">
       <div className="tl-lab" style={{color:r.c}} title={r.tag}>{r.ic}{narrow?'':' '+r.tag}</div>
@@ -1345,7 +1407,7 @@ function M3({miss,done}){
         <Stats items={[{l:'🚛 Backfill start',v:'Day '+bS},{l:'Project',v:projDur(fix)+' days'},{l:'Crew cost',v:'$16,400'}]}/></div>
       {!clear&&<div className="banner bad">⚠ {fc.ft>=PJ-1e-6?'Same spot at 300 ft on day '+fmt(fc.t):'Lines cross at '+Math.round(fc.ft)+' ft on day '+fmt(fc.t)} — drag Backfill later</div>}
       {clear&&!ran&&<div className="banner good">✓ Backfill day {bS} → {bS+6}<span className="sp"/><button className="go" disabled={running} onClick={()=>{DL.inc('runs');DL.ev('run',{backfill_start:bS});setRunning(true);fclk.play(0,projEnd(fix))}}>▶ Run again</button></div>}
-      {clear&&ran&&<div className="banner good">✓ No collision · {projDur(fix)} days<span className="sp"/><button className="go" onClick={()=>{DL.mark('fix');DL.set({...schedCols(CREWS.map((c,i)=>({rate:c.rate,dc:c.cost,S:fix[i].S,E:fix[i].S+fix[i].D}))),duration:projDur(fix),direct:16400,total:loaded(16400).total});
+      {clear&&ran&&<div className="banner good">✓ No collision · {projDur(fix)} days<span className="sp"/><button className="go" onClick={()=>{DL.mark('fix');DL.set({...schedCols(CREWS.map((c,i)=>({rate:c.rate,dc:c.cost,S:fix[i].S,E:fix[i].S+fix[i].D}))),duration:projDur(fix),direct:16400,total:loaded(16400).total,'LOB data':lobData(fix,CREWS.map(c=>c.rate))});
         DL.snap(planShot('Training 3 · Final schedule',fix,CREWS.map(c=>c.rate)));done()}}>Finish ▶</button></div>}
       <Budget title={clear?'📋 Final schedule':'📋 Final schedule · fix the clash first'} done={true} plan={fix} rows={CREWS.map((c,i)=>({r:c.rate,c:c.cost,S:fix[i].S,D:fix[i].D,show:true}))}/>
     </>}
@@ -1464,6 +1526,7 @@ function Equip({miss,done,target,init=null}){
       {all&&ran&&(okD&&okC
         ?<div className="banner good">{target?'🎯 Both targets met · '+dur+' days · '+money(bid.total):'✓ Schedule complete · '+dur+' days'}<span className="sp"/><button className="go" onClick={()=>{if(!target)saveT5({sel,S});else saveT6({sel,S});
           DL.set({...schedCols(crew.map((c,i)=>({rate:c.r,dc:c.dc,S:S[i],E:S[i]+c.D,fleet:fleetTxt(sel[i])}))),duration:dur,direct:bid.direct,indirect:bid.ind,profit:bid.pr,total:bid.total,
+            'LOB data':lobData(plan,crew.map(c=>c.r)),
             ...(target?{target_days:target.days,target_cost:target.bid,met_days:okD,met_cost:okC,budget_left:target.bid-bid.total}:{})});
           DL.snap(planShot(target?'Training 6 · Hit the target':'Training 5 · Equipment',plan,crew.map(c=>c.r),deadline));done()}}>Finish ▶</button></div>
         :<div className="banner bad">✗ {!okD?dur+' days > '+target.days:''}{!okD&&!okC?' · ':''}{!okC?money(bid.total)+' > '+money(target.bid):''}<span className="sp"/><small>Undo a trade above</small><button className="go ghost sm" onClick={()=>{miss();setRan(false);clk.set(0)}}>OK</button></div>)}
@@ -1507,41 +1570,81 @@ const P6KEY='pipelineRush.t6plan',R2DEF={sel:[[0,1,1],[0,0,2],[0,1,1]],S:[1,3,5]
 function loadT6(){try{const p=JSON.parse(localStorage.getItem(P6KEY));if(p&&p.sel&&p.S)return p}catch(e){}return window.__t6plan||null}
 function saveT6(p){window.__t6plan=p;try{localStorage.setItem(P6KEY,JSON.stringify(p))}catch(e){}}
 const R2LD=1000;
-const R2EV=[
- {id:'E2',ic:'🪨',name:'Hard rock refusal',crew:0,at:225,len:2,what:'The excavator hits rock at 225 ft: half speed for 2 days.',
-  opts:[{k:'A',n:'Absorb',s:'Dig on at half speed · $0',type:'absorb'},
-        {k:'B',n:'Rock breaker',s:'$900 · slowdown removed',type:'reset',fee:900},
-        {k:'C',n:'Hire an excavator',s:'Pick one machine · day rate × 2 days + $200 delivery',type:'hire',kind:'exc'},
-        {k:'D',n:'Borrow from Backfill',s:'Pick one machine · Backfill slows for 2 days',type:'borrow',lenders:[2]}]},
- {id:'P1',ic:'🕳️',name:'Trench collapse',crew:1,at:120,len:2,what:'A trench wall fails behind the pipe crew: Pipe laying stops until the trench is made safe.',
-  opts:[{k:'A',n:'Borrow an excavator',s:'Pick a crew and one machine · stop: Small 3 d, Standard 2 d, Heavy 1 d',type:'borrow',lenders:[0,2]},
-        {k:'B',n:'Protection equipment',s:'$1,800 · no stop, back to normal today',type:'reset',fee:1800},
-        {k:'C',n:'Hire an excavator',s:'Pick one machine · stop: Small 3 d, Standard 2 d, Heavy 1 d',type:'hire',kind:'exc'}]},
- {id:'B1',ic:'🧪',name:'Poor compaction',crew:2,at:120,len:3,what:'A density test fails behind the backfill crew: Backfill works at 60% for 3 days.',
-  opts:[{k:'A',n:'Absorb',s:'Rework at 60% for 3 days · $0',type:'absorb'},
-        {k:'B',n:'Hire a backfill set',s:'Pick one machine · day rate × 3 days + $200 delivery',type:'hire',kind:'back'},
-        {k:'C',n:'Compactor',s:'$500 · slowdown removed',type:'reset',fee:500},
-        {k:'D',n:'Borrow from Excavation',s:'Pick one machine · Excavation slows for 3 days',type:'borrow',lenders:[0]}]}];
+/* LOB Disruption Event Library (8 situations): effects and responses follow the library's Situations and
+   Response Option sheets. Stage 2 places them at fixed spots; Stage 3 draws them by location odds.
+   f = rate factor on the hit crew(s) while the event lasts; len = days. Fees are in Stage 2 dollars ×
+   R2CFG.feeMul (Stage 3 scales them); hire = day rate × days + R2CFG.mob delivery. */
+const LIB={
+ E1:{id:'E1',ic:'⚡',name:'Utility strike',crew:0,f:.6,len:3,what:'The excavator hits a buried utility line: 60% speed for 3 days.',
+  opts:[{k:'A',n:'Work at 60%',s:'Dig on carefully · $0',type:'absorb',right:'3 or more spare days before the deadline',wrong:'the deadline is close'},
+        {k:'B',n:'Hire an excavator',s:'Pick one machine · day rate × 3 days + delivery',type:'hire',right:'a machine comes fast and you can afford it',wrong:'money is tight'},
+        {k:'C',n:'Borrow from Backfill',s:'Pick one machine · Backfill slows for 3 days',type:'borrow',lenders:[2],right:'Backfill has room to spare',wrong:'Backfill has no room to spare'},
+        {k:'D',n:'Protection equipment',s:'$1,500 · back to full speed now',type:'reset',fee:1500,right:'this spot is urgent',wrong:'nothing urgent here yet'}]},
+ E2:{id:'E2',ic:'🪨',name:'Hard rock refusal',crew:0,f:.4,len:2,what:'The excavator hits hard rock: 40% speed for 2 days.',
+  opts:[{k:'A',n:'Work at 40%',s:'Dig on slowly · $0',type:'absorb',right:'2 or more spare days before the deadline',wrong:'the deadline is close'},
+        {k:'B',n:'Rock-removal machine',s:'$900 · slowdown removed',type:'reset',fee:900,right:'something urgent depends on this zone',wrong:'nothing urgent depends on it yet'},
+        {k:'C',n:'Borrow from Backfill',s:'Pick one machine · Backfill slows for 2 days',type:'borrow',lenders:[2],right:'Backfill has room to spare',wrong:'Backfill has no room to spare'},
+        {k:'D',n:'Hire an excavator',s:'Pick one machine · day rate × 2 days + delivery',type:'hire',right:'a machine comes fast and you can afford it',wrong:'money is tight'}]},
+ P1:{id:'P1',ic:'🕳️',name:'Trench collapse',crew:1,f:0,len:2,what:'A trench wall fails: Pipe laying stops until the trench is made safe.',
+  opts:[{k:'A',n:'Borrow an excavator',s:'Pick a crew and one machine · stop: Small 3 d, Standard 2 d, Heavy 1 d',type:'borrow',lenders:[0,2],right:'the lending crew has room to spare, or a Heavy excavator is on site',wrong:'no crew has room to spare, or only a Small excavator is free'},
+        {k:'B',n:'Protection equipment',s:'$1,800 · no stop, back to normal today',type:'reset',fee:1800,right:'work must be back to normal today',wrong:'you can afford to wait a couple of days'},
+        {k:'C',n:'Hire an outside excavator',s:'Pick one machine · stop: Small 3 d, Standard 2 d, Heavy 1 d',type:'hire',right:'neither crew can spare a machine',wrong:'a crew can spare one, which is cheaper'}]},
+ P2:{id:'P2',ic:'🚚',name:'Late pipe delivery',crew:1,f:.5,len:3,what:'Pipe and fittings arrive late: Pipe laying at 50% for 3 days.',
+  opts:[{k:'A',n:'Wait for delivery',s:'50% for 3 days · $0',type:'absorb',right:'3 spare days and nothing urgent in that window',wrong:'a deadline falls inside those 3 days'},
+        {k:'B',n:'Alternate supplier',s:'$600 · 50% for 1 day only',type:'reset',fee:600,rest:{f:.5,len:1},right:'saving 2 days is worth the extra cost',wrong:'you can already afford the 3-day wait'},
+        {k:'C',n:'Slow Excavation and Backfill to match',s:'All three at 50% for 3 days · $0',type:'match',right:'it keeps the other crews from running into Pipe laying',wrong:'another crew has its own deadline'}]},
+ P3:{id:'P3',ic:'🏗️',name:'Rigging failure',crew:1,f:.2,len:2,what:'A pipe section is dropped during lifting: Pipe laying at 20% for 2 days.',
+  opts:[{k:'A',n:'Hire a mobile crane',s:'$700 · 20% for 1 day, then full speed',type:'reset',fee:700,rest:{f:.2,len:1},right:'a crane comes fast and you can afford it',wrong:'money is tight'},
+        {k:'B',n:'Safety inspection',s:'$1,500 · back to full speed now',type:'reset',fee:1500,right:'the slowdown is a safety rule, not real damage',wrong:'the pipe is actually damaged'},
+        {k:'C',n:'Slow Excavation and Backfill to match',s:'All three at 20% for 2 days · $0',type:'match',right:'it keeps the other crews from running into Pipe laying',wrong:'another crew has its own deadline'},
+        {k:'D',n:'Work at 20%',s:'Lay slowly for 2 days · $0',type:'absorb',right:'there are enough spare days to run slow',wrong:'the deadline is close'}]},
+ B1:{id:'B1',ic:'🧪',name:'Poor compaction',crew:2,f:.7,len:3,what:'A density test fails behind the backfill crew: Backfill at 70% for 3 days.',
+  opts:[{k:'A',n:'Borrow from Excavation',s:'Pick one machine · Excavation slows for 3 days',type:'borrow',lenders:[0],right:'Excavation is not done yet and has room to spare',wrong:'Excavation has finished or has no room to spare'},
+        {k:'B',n:'Hire a backfill set',s:'Pick one machine · day rate × 3 days + delivery',type:'hire',right:'a machine comes fast and you can afford it',wrong:'money is tight'},
+        {k:'C',n:'Compactor',s:'$500 · slowdown removed',type:'reset',fee:500,right:'worth paying to get back to full speed now',wrong:'it is cheaper to fix it in place'},
+        {k:'D',n:'Work at 70%',s:'Rework slowly for 3 days · $0',type:'absorb',right:'spare days are available',wrong:'there are not enough spare days'}]},
+ A1:{id:'A1',ic:'🌊',name:'Trench settlement',crew:'all',f:.7,len:2,what:'Groundwater makes the trench settle: all crews at 70% for 2 days.',
+  opts:[{k:'A',n:'Work at 70%',s:'Everyone slows for 2 days · $0',type:'absorb',right:'there are spare days across the whole site',wrong:'the whole site cannot afford to slow down'},
+        {k:'B',n:'Hire one machine',s:'Pick a crew and one machine · day rate × 2 days + delivery',type:'hire',right:'you can afford to speed a crew back up',wrong:'money is tight'},
+        {k:'C',n:'Borrow between crews',s:'Move one machine from one crew to another for 2 days',type:'borrow',lenders:[0,1,2],right:'one crew has room to spare',wrong:'no crew has room to spare'},
+        {k:'D',n:'Pump to drain',s:'$1,200 · Excavation and Backfill back to 100%, Pipe laying stays at 70%',type:'reset',fee:1200,rest:{crews:[1],f:.7,len:2},right:'Pipe laying is not the crew everyone waits on',wrong:'Pipe laying is the crew everyone waits on'}]},
+ A2:{id:'A2',ic:'⛈️',name:'Extreme weather',crew:'all',f:.5,len:2,what:'Heavy rain, wind, heat or freeze: all crews at 50% for 2 days.',
+  opts:[{k:'A',n:'Work at 50%',s:'Everyone slows for 2 days · $0',type:'absorb',right:'there are 2 spare days across the whole site',wrong:'the whole site cannot afford to slow down'},
+        {k:'B',n:'Hire one machine',s:'Pick a crew and one machine · day rate × 2 days + delivery',type:'hire',right:'you can afford to speed a crew back up',wrong:'money is tight'},
+        {k:'C',n:'Borrow between crews',s:'Move one machine from one crew to another for 2 days',type:'borrow',lenders:[0,1,2],right:'one crew has room to spare',wrong:'no crew has room to spare'},
+        {k:'D',n:'Pump to drain',s:'$1,500 · Excavation and Backfill back to 100%, Pipe laying stays at 50%',type:'reset',fee:1500,rest:{crews:[1],f:.5,len:2},right:'Pipe laying is not the crew everyone waits on',wrong:'Pipe laying is the crew everyone waits on'}]}};
+/* the events of the level being played: [{...LIB[id], at:<ft> | day:<day>}] (one level is mounted at a time) */
+let R2EV=[];
+const R2CFG={feeMul:1,mob:200,len:300};
+const mkEv=list=>list.map(x=>({...LIB[x.id],...x}));
 const KEYS=['exc','pipe','back'];
 const sumRate=(crew,q)=>q.reduce((a,n,j)=>a+n*EQUIP[KEYS[crew]][j].r,0);
 const sumCost=(crew,q)=>q.reduce((a,n,j)=>a+n*EQUIP[KEYS[crew]][j].c,0);
-const HIRE_MOB=200,STOP=[3,2,1];
+const STOP=[3,2,1];
 const rateOf=(crew,j)=>EQUIP[KEYS[crew]][j].r;
+const crewsOf=E=>E.crew==='all'?[0,1,2]:[E.crew];
+const recvOf=(E,m)=>E.crew==='all'?(m?m.R:null):E.crew;
+const hireKind=(E,m)=>E.id==='P1'?'exc':KEYS[recvOf(E,m)];
+const feeOf=o=>Math.round(o.fee*R2CFG.feeMul);
 /* how long the event acts, given the response and the one machine used */
-function r2len(e,oi,m){const E=R2EV[e],o=E.opts[oi];if(E.id!=='P1')return E.len;if(o.type==='reset')return 0;return m&&m.j!=null?STOP[m.j]:0}
-function r2fee(e,oi,m){const E=R2EV[e],o=E.opts[oi];if(o.type==='reset')return o.fee;if(o.type!=='hire'||!m||m.j==null)return 0;
-  return EQUIP[o.kind][m.j].c*r2len(e,oi,m)+HIRE_MOB}
+function r2len(e,oi,m){const E=R2EV[e],o=E.opts[oi];
+  if(E.id==='P1'){if(o.type==='reset')return 0;return m&&m.j!=null?STOP[m.j]:0}
+  if(o.type==='reset')return o.rest?o.rest.len:0;return E.len}
+function r2fee(e,oi,m){const E=R2EV[e],o=E.opts[oi];if(o.type==='reset')return feeOf(o);if(o.type!=='hire'||!m||m.j==null)return 0;
+  const k=hireKind(E,m);if(!k)return 0;return EQUIP[k][m.j].c*r2len(e,oi,m)+R2CFG.mob}
 function r2effect(e,oi,m,te){const E=R2EV[e],o=E.opts[oi],out={mods:[],adds:[],fees:r2fee(e,oi,m)},d=r2len(e,oi,m),a=te,b=te+d;
-  const z=m&&m.j!=null?SZ[m.j]:'';
+  const z=m&&m.j!=null?SZ[m.j]:'',lab=E.ic+' '+E.name;
   if(E.id==='P1'){if(o.type==='reset')return out;
-    out.mods.push([1,a,b,0,'🕳️ Trench collapse · stopped']);
+    out.mods.push([1,a,b,0,lab+' · stopped']);
     if(o.type==='borrow')out.adds.push([m.L,a,b,-rateOf(m.L,m.j),'🔁 Lent '+z+' to make the trench safe']);
-    if(o.type==='hire')out.mods.push([1,a,b,1,'🚚 hired '+z+' excavator on the trench']);
     return out}
-  if(o.type!=='reset')out.mods.push([E.crew,a,b,E.id==='E2'?.5:.6,E.id==='E2'?'🪨 Rock refusal · ½ speed':'🧪 Poor compaction · 60%']);
-  if(o.type==='hire')out.adds.push([E.crew,a,b,EQUIP[KEYS[E.crew]][m.j].r,'🚚 + hired '+z]);
-  if(o.type==='borrow'){out.adds.push([E.crew,a,b,EQUIP[KEYS[E.crew]][m.j].r,'🔁 + borrowed '+z+' from '+CREWS[m.L].tag]);
-    out.adds.push([m.L,a,b,-rateOf(m.L,m.j),'🔁 Lent '+z+' to '+CREWS[E.crew].tag])}
+  if(o.type==='reset'){if(o.rest)(o.rest.crews||crewsOf(E)).forEach(c=>out.mods.push([c,a,a+o.rest.len,o.rest.f,lab+' · '+Math.round(o.rest.f*100)+'%']));return out}
+  crewsOf(E).forEach(c=>out.mods.push([c,a,b,E.f,lab+' · '+Math.round(E.f*100)+'%']));
+  if(o.type==='match')[0,1,2].filter(c=>!crewsOf(E).includes(c)).forEach(c=>out.mods.push([c,a,b,E.f,'🐢 Slowed to match · '+Math.round(E.f*100)+'%']));
+  const R=recvOf(E,m);
+  if(o.type==='hire'&&R!=null)out.adds.push([R,a,b,EQUIP[KEYS[R]][m.j].r,'🚚 + hired '+z]);
+  if(o.type==='borrow'&&R!=null){out.adds.push([R,a,b,EQUIP[KEYS[R]][m.j].r,'🔁 + borrowed '+z+' from '+CREWS[m.L].tag]);
+    out.adds.push([m.L,a,b,-rateOf(m.L,m.j),'🔁 Lent '+z+' to '+CREWS[R].tag])}
   return out}
 function r2plan(){const raw=loadT6(),p=raw||R2DEF;
   const rate=[0,1,2].map(i=>sumRate(i,p.sel[i])),cost=[0,1,2].map(i=>sumCost(i,p.sel[i]));
@@ -1549,34 +1652,34 @@ function r2plan(){const raw=loadT6(),p=raw||R2DEF;
   const b=r2sim(P,[],{},{},[0,0,0],[]);P.base=b;P.deadline=b.dur+2;P.dayBurn=loaded(cost.reduce((a,c)=>a+c,0)).total;P.budget=Math.ceil((b.total+P.dayBurn)/100)*100;return P}
 /* day-by-day engine: every day each crew moves rate × factors; its last day only finishes the feet left
    (still a full paid day). Events, loans and pauses start at the start of a day. Lines may cross: crossings are reported. */
-function r2sim(P,evs,picks,borrows,extra,pauses){pauses=pauses||[];
+function r2sim(P,evs,picks,borrows,extra,pauses){pauses=pauses||[];const LEN=P.len||PJ;
   const S=P.S.map((s,i)=>s+extra[i]),r=P.rate,x=[0,0,0],F=[null,null,null],tr=[[],[],[]],wait=[0,0,0],te={},conf=[null,null,null],segs=[[],[],[]];
   let mods=pauses.map(p=>[p.c,p.a,p.a+p.n,0,'⏸ Paused']),adds=[],fees=0;
   for(let i=0;i<3;i++)tr[i].push({t:S[i],x:0,w:false});
-  for(let day=Math.min(...S);day<80&&F.some(f=>f===null);day++){
-    for(const e of evs)if(te[e]==null&&x[R2EV[e].crew]>=R2EV[e].at-1e-9){te[e]=day;if(picks[e]!=null){const f=r2effect(e,picks[e],borrows[e],day);mods=mods.concat(f.mods);adds=adds.concat(f.adds);fees+=f.fees}}
+  for(let day=Math.min(...S);day<200&&F.some(f=>f===null);day++){
+    for(const e of evs)if(te[e]==null&&(R2EV[e].crew==='all'?day>=R2EV[e].day:x[R2EV[e].crew]>=R2EV[e].at-1e-9)){te[e]=day;if(picks[e]!=null){const f=r2effect(e,picks[e],borrows[e],day);mods=mods.concat(f.mods);adds=adds.concat(f.adds);fees+=f.fees}}
     const x0=x.slice();
     for(let i=0;i<3;i++){if(F[i]!==null||day<S[i])continue;
       let m=1,add=0;const labs=[];
       for(const [c,a,b,k,l] of mods)if(c===i&&day>=a&&day<b){m*=k;if(l&&!labs.includes(l))labs.push(l)}
       for(const [c,a,b,k,l] of adds)if(c===i&&day>=a&&day<b){add+=k;if(l&&!labs.includes(l))labs.push(l)}
       if(labs.includes('⏸ Paused')){m=0;add=0;labs.splice(0,labs.length,'⏸ Paused')}
-      const v=Math.max(0,r[i]*m+add),adv=Math.min(v,PJ-x[i]);
+      const v=Math.max(0,r[i]*m+add),adv=Math.min(v,LEN-x[i]);
       if(v<=1e-9)wait[i]++;
-      x[i]+=adv;const tEnd=x[i]>=PJ-1e-9&&v>0?day+adv/v:day+1;
+      x[i]+=adv;const tEnd=x[i]>=LEN-1e-9&&v>0?day+adv/v:day+1;
       tr[i].push({t:tEnd,x:x[i],w:false});
       const lab=labs.length?labs.join(' · '):'Working',sg=segs[i][segs[i].length-1];
       if(sg&&sg.lab===lab&&Math.abs(sg.rate-v)<1e-9&&sg.b===day){sg.b=day+1;sg.ft+=adv}else segs[i].push({lab,rate:v,a:day,b:day+1,ft:adv,red:lab!=='Working'});
-      if(x[i]>=PJ-1e-9)F[i]=tEnd}
+      if(x[i]>=LEN-1e-9)F[i]=tEnd}
     for(let i=1;i<3;i++){if(conf[i]||day<S[i])continue;const L=i-1;
       if(F[L]!==null&&F[L]<=day+1e-9)continue;
       const f0=x0[i],f1=x[i],l0=x0[L],l1=x[L];
       const fT=F[i]!==null&&F[i]<=day+1+1e-9?F[i]:null,lT=F[L]!==null&&F[L]<=day+1+1e-9?F[L]:null;
-      if(fT!==null&&(lT===null||fT<=lT+1e-9)){conf[i]={i,t:fT,ft:PJ};continue}
+      if(fT!==null&&(lT===null||fT<=lT+1e-9)){conf[i]={i,t:fT,ft:LEN};continue}
       if(f1>1e-9&&lT===null&&f1>=l1-1e-9){const den=(f1-f0)-(l1-l0);const u=f0<l0-1e-9&&den>1e-9?Math.min(1,(l0-f0)/den):0;conf[i]={i,t:day+u,ft:f0+u*(f1-f0)}}}
   }
   const E=F.map(f=>Math.ceil(f-1e-9)),paid=E.map((e,i)=>e-S[i]),direct=paid.reduce((a,p,i)=>a+p*P.cost[i],0),b=loaded(direct);
-  const dur=Math.max(...E)-Math.min(...S),late=P.deadline!=null?Math.max(0,dur-P.deadline):0,ld=late*R2LD;
+  const dur=Math.max(...E)-Math.min(...S),late=P.deadline!=null?Math.max(0,dur-P.deadline):0,ld=late*(P.ldRate||R2LD);
   return{S,E,F,paid,wait,tr,te,segs,fees,direct,b,dur,late,ld,total:b.total+fees+ld,conflicts:conf.filter(Boolean)}}
 function posAt(tr,t){if(t<=tr[0].t)return{x:0,w:false};for(let k=1;k<tr.length;k++){if(tr[k].t>=t){const a=tr[k-1],b=tr[k],f=(t-a.t)/Math.max(1e-9,b.t-a.t);return{x:a.x+(b.x-a.x)*f,w:b.w}}}return{x:PJ,w:false}}
 function r2site(res,t){const ft=[],st=[];for(let i=0;i<3;i++){const p=posAt(res.tr[i],t),q=posAt(res.tr[i],t+.06);ft.push(p.x);
@@ -1619,11 +1722,14 @@ function RiskSheet({P,res,budget,t,ended,feeLog}){
 function Debrief({P,res,picks,borrows,budget,pauses}){
   const items=[];
   (pauses||[]).forEach(p=>items.push({ic:'⏸',t:'You paused '+CREWS[p.c].tag+' for '+p.n+' day'+(p.n>1?'s':'')+' from Day '+p.a.toFixed(1)+', still paid',bad:true}));
-  Object.keys(picks).forEach(e=>{const E=R2EV[e],o=E.opts[picks[e]],m=borrows[e];
-    items.push({ic:E.ic,t:E.name+' → you chose '+o.k+' · '+o.n+(m&&m.j!=null?' ('+SZ[m.j]+(o.type==='borrow'?' from '+CREWS[m.L].tag:'')+')':'')});
-    if(E.id==='P1'&&o.type!=='reset')items.push({ic:'⏸',t:'Pipe laying stopped '+r2len(+e,picks[e],m)+' day'+(r2len(+e,picks[e],m)>1?'s':'')+' while the trench was made safe, still paid',bad:true});
-    if(o.type==='borrow'){const L=m.L,lose=rateOf(L,m.j),wasDone=res.F[L]!=null&&res.te[e]!=null&&res.te[e]>=res.F[L]-1e-6;
-      items.push({ic:'🔁',t:wasDone?CREWS[L].tag+' had already finished, so lending its idle machine cost nothing':CREWS[L].tag+' worked at '+Math.max(0,P.rate[L]-lose)+' ft/d instead of '+P.rate[L]+' while its '+SZ[m.j]+' was away, still paying for it'})}});
+  Object.keys(picks).forEach(e=>{const E=R2EV[e],o=E.opts[picks[e]],m=borrows[e],d=r2len(+e,picks[e],m);
+    const R=m?recvOf(E,m):null;
+    items.push({ic:E.ic,t:E.name+' → you chose '+o.k+' · '+o.n+(m&&m.j!=null?' ('+SZ[m.j]+(o.type==='borrow'?' from '+CREWS[m.L].tag:'')+(E.crew==='all'&&R!=null?' for '+CREWS[R].tag:'')+')':'')});
+    if(E.id==='P1'&&o.type!=='reset')items.push({ic:'⏸',t:'Pipe laying stopped '+d+' day'+(d>1?'s':'')+' while the trench was made safe, still paid',bad:true});
+    if(o.type==='match')items.push({ic:'🐢',t:'Excavation and Backfill were slowed to '+Math.round(E.f*100)+'% for '+d+' days to stay behind Pipe laying, still paid',bad:true});
+    if(o.type==='borrow'){const L=m.L,lose=rateOf(L,m.j);
+      items.push({ic:'🔁',t:CREWS[L].tag+' worked at '+Math.max(0,P.rate[L]-lose)+' ft/d instead of '+P.rate[L]+' while its '+SZ[m.j]+' was away, still paying for it'})}
+    const verdict=r2verdict(P,res,+e,picks[e],m);if(verdict)items.push({ic:verdict.ok?'👍':'🤔',t:'Library rule: '+o.n+' is right when '+o.right+'; wrong when '+o.wrong+'. Here: '+verdict.why,bad:!verdict.ok})});
   CREWS.forEach((c,i)=>{const dd=res.paid[i]-P.base.paid[i];
     if(res.S[i]>P.S[i])items.push({ic:'⏩',t:'You delayed '+c.tag+' to start Day '+res.S[i]+' instead of Day '+P.S[i]});
     if(dd>0)items.push({ic:'💸',t:c.tag+': '+res.paid[i]+' paid days instead of '+P.base.paid[i]+' → +'+money(dd*P.cost[i])+' crew cost',bad:true});
@@ -1635,28 +1741,40 @@ function Debrief({P,res,picks,borrows,budget,pauses}){
   items.push({ic:left<0?'✗':'✓',t:'Total '+money(res.total)+' vs budget '+money(budget)+' → '+(left<0?money(-left)+' over':money(left)+' left'),bad:left<0,strong:true});
   return(<div className="debrief"><h4>🔎 What happened</h4><ul>{items.map((x,i)=><li key={i} className={(x.bad?'bad':'')+(x.strong?' strong':'')}><span>{x.ic}</span>{x.t}</li>)}</ul></div>);
 }
+/* the library's "When right / When wrong" rule, judged at the moment of the decision (spare days = deadline − forecast finish
+   without this event's fix; a lender "has room" when it was not the last crew to finish and is not finished) */
+function r2verdict(P,res,e,oi,m){const E=R2EV[e],o=E.opts[oi],t=res.te[e];if(t==null)return null;
+  const spare=P.deadline-(Math.max(...P.base.E)-Math.min(...P.S)),need=E.len||2;
+  const lenderRoom=L=>L!=null&&res.E[L]<Math.max(...res.E)&&!(res.F[L]!=null&&res.F[L]<=t);
+  if(o.type==='absorb')return spare>=need?{ok:true,why:spare+' spare days for a '+need+'-day slowdown'}:{ok:false,why:'only '+spare+' spare days'};
+  if(o.type==='borrow')return lenderRoom(m.L)?{ok:true,why:CREWS[m.L].tag+' still finished ahead of the last crew'}:{ok:false,why:CREWS[m.L].tag+' had no room to spare'};
+  if(o.type==='match')return {ok:true,why:'the other crews stayed behind Pipe laying'};
+  return null}
 /* one-machine picker for Hire and Borrow: borrow shows only machines the lending crew has */
-function MachinePicker({P,e,oi,m,setM,t,res,lenderOk}){const E=R2EV[e],o=E.opts[oi],c=E.crew,isB=o.type==='borrow',L=isB?m.L:null;
-  const kind=E.id==='P1'?'exc':KEYS[c];
+function MachinePicker({P,e,oi,m,setM,t,res,lenderOk}){const E=R2EV[e],o=E.opts[oi],isB=o.type==='borrow',all=E.crew==='all',L=isB?m.L:null,R=recvOf(E,m);
+  const kind=hireKind(E,m);
   const sizes=SZ.map((z,j)=>({z,j,ok:!isB||(L!=null&&P.sel[L][j]>0)})).filter(x=>x.ok);
-  const own=P.rate[c],j=m.j,d=j!=null?r2len(e,oi,m):null,fee=j!=null?r2fee(e,oi,m):0;
+  const j=m.j,d=j!=null?r2len(e,oi,m):null,fee=j!=null?r2fee(e,oi,m):0;
   const idle=isB&&L!=null&&res.F[L]!=null&&res.F[L]<=t+1e-6,startsLater=isB&&L!=null&&res.S[L]>t+1e-6;
-  let mine=null;if(j!=null){const add=EQUIP[kind][j].r;
-    if(E.id==='E2')mine=<>🚜 Excavation <b>{own*.5} → {own*.5+add} ft/d</b> <small>(half speed + {SZ[j]})</small></>;
-    else if(E.id==='P1')mine=<>🏗️ Pipe laying <b>stops {d} day{d>1?'s':''}</b> <small>({SZ[j]} excavator makes the trench safe)</small></>;
-    else mine=<>🚛 Backfill <b>{+(own*.6).toFixed(1)} → {+(own*.6+add).toFixed(1)} ft/d</b> <small>(60% + {SZ[j]})</small></>}
+  const lenders=isB?o.lenders.filter(x=>lenderOk(x)&&x!==R):[];
+  const needR=all&&R==null,needL=isB&&L==null;
+  let mine=null;if(j!=null&&R!=null&&E.id!=='P1'){const own=P.rate[R],add=EQUIP[KEYS[R]][j].r,base=crewsOf(E).includes(R)?own*E.f:own;
+    mine=<>{CREWS[R].ic} {CREWS[R].tag} <b>{+base.toFixed(1)} → {+(base+add).toFixed(1)} ft/d</b> <small>({Math.round((crewsOf(E).includes(R)?E.f:1)*100)}% + {SZ[j]})</small></>}
+  if(j!=null&&E.id==='P1')mine=<>🏗️ Pipe laying <b>stops {d} day{d>1?'s':''}</b> <small>({SZ[j]} excavator makes the trench safe)</small></>;
   return(<div className="borrow">
-    <div className="bhd" style={{marginBottom:4}}>{isB?'🔁 Borrow one machine':'🚚 Hire one machine from outside'}<small style={{color:'var(--soft)',fontWeight:700}}>{isB?' · the lending crew keeps paying for it':' · day rate × days on site + '+money(HIRE_MOB)+' delivery'}</small></div>
-    {isB&&o.lenders.length>1&&o.lenders.filter(lenderOk).length>1&&<div className="row l" style={{gap:6,marginBottom:6}}><span className="unitnote" style={{margin:0}}>From</span>{o.lenders.filter(lenderOk).map(Lx=>
-      <button key={Lx} type="button" className={'chip'+(L===Lx?' y':'')} aria-pressed={L===Lx} onClick={()=>setM({L:Lx,j:null})}>{CREWS[Lx].ic} {CREWS[Lx].tag}</button>)}</div>}
-    {(!isB||L!=null)&&<div className="opts" role="radiogroup">{sizes.map(x=>{const r=EQUIP[kind][x.j].r;return(
-      <button key={x.j} type="button" role="radio" aria-checked={j===x.j} className={'opt r2opt'+(j===x.j?' on':'')} style={{'--tc':CREWS[isB?L:c].c}} onClick={()=>setM({L,j:x.j})}>
-        <div><b>{x.z}{isB?'':' '+(kind==='exc'?'excavator':'backfill set')}</b>
+    <div className="bhd" style={{marginBottom:4}}>{isB?'🔁 Borrow one machine':'🚚 Hire one machine from outside'}<small style={{color:'var(--soft)',fontWeight:700}}>{isB?' · the lending crew keeps paying for it':' · day rate × days on site + '+money(R2CFG.mob)+' delivery'}</small></div>
+    {all&&<div className="row l" style={{gap:6,marginBottom:6}}><span className="unitnote" style={{margin:0}}>{isB?'To':'For'}</span>{CREWS.map((c,x)=>(res.F[x]!=null&&res.F[x]<=t+1e-6)?null:
+      <button key={x} type="button" className={'chip'+(R===x?' y':'')} aria-pressed={R===x} onClick={()=>setM({L:m.L===x?null:m.L,R:x,j:null})}>{c.ic} {c.tag}</button>)}</div>}
+    {isB&&!needR&&lenders.length>1&&<div className="row l" style={{gap:6,marginBottom:6}}><span className="unitnote" style={{margin:0}}>From</span>{lenders.map(Lx=>
+      <button key={Lx} type="button" className={'chip'+(L===Lx?' y':'')} aria-pressed={L===Lx} onClick={()=>setM({L:Lx,R:m.R,j:null})}>{CREWS[Lx].ic} {CREWS[Lx].tag}</button>)}</div>}
+    {!needR&&!needL&&kind&&<div className="opts" role="radiogroup">{sizes.map(x=>{const r=EQUIP[kind][x.j].r;return(
+      <button key={x.j} type="button" role="radio" aria-checked={j===x.j} className={'opt r2opt'+(j===x.j?' on':'')} style={{'--tc':CREWS[isB?L:(R!=null?R:1)].c}} onClick={()=>setM({L,R:m.R,j:x.j})}>
+        <div><b>{x.z}{isB?'':' '+(kind==='exc'?'excavator':kind==='pipe'?'pipe crane':'backfill set')}</b>
         <small>{E.id==='P1'?'stop '+STOP[x.j]+' d':'+'+r+' ft/d'}{isB?' · '+CREWS[L].tag+' −'+rateOf(L,x.j)+' ft/d':' · '+money(EQUIP[kind][x.j].c)+'/d'}{isB?' · on site '+P.sel[L][x.j]:''}</small></div></button>)})}</div>}
     {j!=null&&<div className="brates"><span>{mine}</span>
       {isB?(idle?<span>{CREWS[L].ic} {CREWS[L].tag} <b>finished · machine idle</b></span>
         :<span>{CREWS[L].ic} {CREWS[L].tag} <b className="down">{P.rate[L]} → {Math.max(0,P.rate[L]-rateOf(L,j))} ft/d</b> <small>for {d} day{d>1?'s':''}{startsLater?' (it starts during the loan)':''}</small></span>)
-        :<span>🧾 Fee <b>{money(fee)}</b> <small>{d} d × {money(EQUIP[kind][j].c)} + {money(HIRE_MOB)}</small></span>}</div>}
+        :<span>🧾 Fee <b>{money(fee)}</b> <small>{d} d × {money(EQUIP[kind][j].c)} + {money(R2CFG.mob)}</small></span>}</div>}
   </div>)}
 function FinalSchedule({P,res,title}){
   return(<div className="dock budget"><div className="bhd">{title||'📋 Final schedule'}<Info k="planvs"/></div><div className="tbl-wrap"><table className="tbl fsched">
@@ -1673,7 +1791,7 @@ function FinalSchedule({P,res,title}){
 function FinalBudget({P,res,picks,borrows,budget}){
   const left=budget-res.total,fees=[];
   Object.keys(picks).forEach(e=>{const f=r2fee(+e,picks[e],borrows[e]);if(f){const E=R2EV[e],o=E.opts[picks[e]],m=borrows[e];
-    fees.push({t:E.ic+' '+o.n+(m&&m.j!=null?' ('+SZ[m.j]+(o.type==='hire'?', '+r2len(+e,picks[e],m)+' d × '+money(EQUIP[o.kind][m.j].c)+' + '+money(HIRE_MOB)+' delivery':'')+')':''),v:f})}});
+    fees.push({t:E.ic+' '+o.n+(m&&m.j!=null?' ('+SZ[m.j]+(o.type==='hire'?', '+r2len(+e,picks[e],m)+' d × '+money(EQUIP[hireKind(E,m)][m.j].c)+' + '+money(R2CFG.mob)+' delivery':'')+')':''),v:f})}});
   return(<div className="dock budget"><div className="bhd">💰 Final budget</div><div className="tbl-wrap"><table className="tbl">
     <tbody>{CREWS.map((c,i)=><tr key={c.k}><td style={{color:c.c,fontWeight:800}}>{c.ic} {c.tag} ({res.paid[i]} d × {money(P.cost[i])})</td><td className="r">{money(res.paid[i]*P.cost[i])}</td></tr>)}
       <tr className="tot"><td>Direct</td><td className="r">{money(res.b.direct)}</td></tr>
@@ -1685,42 +1803,48 @@ function FinalBudget({P,res,picks,borrows,budget}){
       <tr><td>Budget</td><td className="r">{money(budget)}</td></tr>
       <tr><td>Left</td><td className={'r '+(left<0?'bad':'good')}>{left<0?'−':''}{money(Math.abs(left))}</td></tr>
     </tbody></table></div></div>)}
-function RiskLevel({evs,extraDays=0,done,lvl}){
-  const P=React.useMemo(()=>{const x=r2plan();x.deadline+=extraDays;return x},[]);const budget=Math.ceil((P.budget+extraDays*P.dayBurn)/100)*100;
+/* one run with risk events. Stage 2: the player's T6 plan. Stage 3: cfg = {P, budget, feeMul, mob, onEnd, endView, maxFix} */
+function RiskLevel({list,allow=1,done,lvl,cfg=null}){
+  const LV=React.useMemo(()=>mkEv(list),[]);R2EV=LV;R2CFG.feeMul=cfg?cfg.feeMul:1;R2CFG.mob=cfg?cfg.mob:200;const evs=LV.map((_,i)=>i);
+  const P=React.useMemo(()=>cfg?cfg.P:r2plan(),[]);const budget=cfg?cfg.budget:Math.ceil((P.base.total+allow*P.dayBurn)/100)*100;P.budget=budget;
+  const LEN=P.len||PJ,K=PJ/LEN,maxFix=cfg&&cfg.maxFix||6;
   const [ph,setPh]=useState('ready');const [picks,setPicks]=useState({});const [borrows,setBorrows]=useState({});const [fired,setFired]=useState([]);
-  const [cur,setCur]=useState(null);const [sel,setSel]=useState(null);const [m,setM]=useState({L:null,j:null});const [extra,setExtra]=useState([0,0,0]);const [feeLog,setFeeLog]=useState([]);const [pauses,setPauses]=useState([]);const [tab,setTab]=useState('lob');
+  const [cur,setCur]=useState(null);const [sel,setSel]=useState(null);const [m,setM]=useState({L:null,R:null,j:null});const [extra,setExtra]=useState([0,0,0]);const [feeLog,setFeeLog]=useState([]);const [pauses,setPauses]=useState([]);const [tab,setTab]=useState('lob');
   const clk=useClock();const [spd,setSpd]=useState(1);clk.rate.current=1.1*spd;
   const lg=useRef({evT:0,fixT:0,ev:null,extra:[0,0,0],np:0});
-  useEffect(()=>{clk.set(Math.min(...P.S));DL.set({plan_source:P.own?'own T6 plan':'sample plan',plan_days:P.base.dur,plan_total:P.base.total,budget,deadline:P.deadline})},[]);
+  useEffect(()=>{clk.set(Math.min(...P.S));if(!cfg)DL.set({plan_source:P.own?'own T6 plan':'sample plan',plan_days:P.base.dur,plan_total:P.base.total,budget,deadline:P.deadline})},[]);
   const t=clk.t;
   const key=JSON.stringify([picks,borrows,extra,pauses]);
   const res=React.useMemo(()=>r2sim(P,evs,picks,borrows,extra,pauses),[key]);   // the truth: drives the run, never shown ahead of time
+  /* drawing scale: charts and the 3D site work in 0–300; a 3-mile job is scaled down for display only */
+  const resD=React.useMemo(()=>LEN===PJ?res:{...res,tr:res.tr.map(tr=>tr.map(z=>({...z,x:z.x*K}))),conflicts:res.conflicts.map(c=>({...c,ft:c.ft*K}))},[res]);
   const pending=evs.filter(e=>!fired.includes(e)).sort((a,b)=>(res.te[a]??99)-(res.te[b]??99));
   const nextT=pending.length&&res.te[pending[0]]!=null?res.te[pending[0]]:null,endT=Math.max(...res.F);
-  const ended=ph==='end',left=budget-res.total,ok=left>=0;
+  const ended=ph==='end',left=budget-res.total,ok=left>=0&&(!cfg||res.dur<=P.deadline);
   const play=()=>{if(ph==='ready')setPh('run');clk.play(t,nextT!=null?nextT:endT)};
   useEffect(()=>{if(ph!=='run'||clk.run)return;
-    if(nextT!=null&&t>=nextT-1e-6){const e=pending[0];setFired(f=>[...f,e]);setCur(e);setSel(null);setM({L:null,j:null});setPh('event');lg.current.evT=DL.secs();DL.ev('event',{event:R2EV[e].id,name:R2EV[e].name,day:+t.toFixed(2)});Snd.alarm()}
+    if(nextT!=null&&t>=nextT-1e-6){const e=pending[0];setFired(f=>[...f,e]);setCur(e);setSel(null);setM({L:null,R:null,j:null});setPh('event');lg.current.evT=DL.secs();DL.ev('event',{event:R2EV[e].id,name:R2EV[e].name,day:+t.toFixed(2)});Snd.alarm()}
     else if(nextT==null&&t>=endT-1e-6){setPh('end');r2log({lvl,ev:'end',total:res.total,dur:res.dur,late:res.late,pass:ok,picks:{...picks},borrows:{...borrows},extra,plan:P.sel});
       DL.set({...schedCols(CREWS.map((c,i)=>({rate:P.rate[i],dc:P.cost[i],S:res.S[i],E:res.E[i],wait:res.wait[i],fleet:fleetTxt(P.sel[i])}))),duration:res.dur,late_days:res.late,late_fee:res.ld,
         direct:res.b.direct,indirect:res.b.ind,profit:res.b.pr,fees:res.fees,total:res.total,budget_left:left,met_days:res.late===0,met_cost:ok,
-        ...Object.fromEntries(CK.map((k,i)=>[k+'_lob_path',res.tr[i].filter((z,n,a)=>n===0||n===a.length-1||Math.abs((z.x-a[n-1].x)-(a[n+1].x-z.x))>1e-6).map(z=>+z.t.toFixed(2)+':'+Math.round(z.x)).join(' ')]))});
-      DL.snap(snapPNG({title:'Stage 2 · '+lvl+' · '+(ok?'within budget':'over budget'),sub:'Participant '+(DL.pid||'—')+' · attempt '+(DL.cur?DL.cur.attempt:'')+' · '+res.dur+' days · '+money(res.total)+' of '+money(budget),
+        'LOB data':lobData(CREWS.map((c,i)=>({S:res.S[i],D:res.E[i]-res.S[i]})),P.rate,res.tr.map(tr=>tr.filter((z,n,a)=>n===0||n===a.length-1||Math.abs((z.x-a[n-1].x)-(a[n+1].x-z.x))>1e-6).map(z=>+z.t.toFixed(2)+':'+Math.round(z.x)).join(' ')))});
+      const xtra=cfg&&cfg.onEnd?cfg.onEnd(res,{left,ok,crossings:lg.current.cross||0}):null;if(xtra)DL.set(xtra);
+      DL.snap(snapPNG({title:(cfg?'Stage 3 · '+cfg.site:'Stage 2 · '+lvl)+' · '+(ok?'passes':'fails'),sub:'Participant '+(DL.pid||'—')+' · attempt '+(DL.cur?DL.cur.attempt:'')+' · '+res.dur+' days · '+money(res.total)+' of '+money(budget),
         tMax,deadline:Math.min(...P.S)+P.deadline,crews:CREWS.map((c,i)=>({tag:c.tag,c:c.c,rate:P.rate[i],S:res.S[i],E:res.E[i],red:res.segs[i].filter(g=>g.red),
-          pts:res.tr[i].map(z=>[z.t,z.x]),plan:[[P.S[i],0],[P.S[i]+PJ/P.rate[i],PJ]]}))}));
-      DL.end(ok?'pass':'fail',{stars:ok?r2stars(left):0});if(ok)Snd.ok();else Snd.bad()}},[t,clk.run,ph]);
+          pts:resD.tr[i].map(z=>[z.t,z.x]),plan:[[P.S[i],0],[P.S[i]+LEN/P.rate[i],PJ]]}))}));
+      DL.end(ok?'pass':'fail',{stars:xtra&&xtra.stars!=null?xtra.stars:ok?r2stars(left):0});if(ok)Snd.ok();else Snd.bad()}},[t,clk.run,ph]);
   const canSlide=i=>ph==='fix'&&res.S[i]>=t-1e-6;
   const minStart=i=>Math.max(P.S[i],Math.ceil(t-1e-9));
   const lenderOk=L=>!(res.F[L]!=null&&res.F[L]<=t+1e-6);
-  const ev=cur!=null?R2EV[cur]:null,oType=ev&&sel!=null?ev.opts[sel].type:null,isBorrow=oType==='borrow',isHire=oType==='hire',qOk=!(isBorrow||isHire)||(m.j!=null&&(!isBorrow||m.L!=null));
+  const ev=cur!=null?R2EV[cur]:null,oType=ev&&sel!=null?ev.opts[sel].type:null,isBorrow=oType==='borrow',isHire=oType==='hire',evAll=ev&&ev.crew==='all',qOk=!(isBorrow||isHire)||(m.j!=null&&(!isBorrow||m.L!=null)&&(!evAll||m.R!=null));
   function confirm(){if(sel==null||!qOk)return;const e=cur,o=R2EV[e].opts[sel],np={...picks,[e]:sel},nb={...borrows,[e]:(isBorrow||isHire)?{...m}:null};
     setPicks(np);setBorrows(nb);const fee=r2fee(e,sel,m);if(fee)setFeeLog(f=>[...f,{t,fee}]);
     r2log({lvl,ev:R2EV[e].id,choice:o.k,type:o.type,machine:m.j!=null?SZ[m.j]:null,from:isBorrow?CREWS[m.L].tag:null,fee,day:+t.toFixed(2)});
     {const id=R2EV[e].id,after=r2sim(P,evs,np,nb,extra,pauses).conflicts,now=DL.secs();
       DL.ev('decision',{event:id,option:o.k,response:o.n,response_type:o.type,machine:m.j!=null&&(isBorrow||isHire)?SZ[m.j]:'',from:isBorrow?CREWS[m.L].tag:'',fee,day:+t.toFixed(2),conflicts:after.length});
-      DL.set({[id+'_day']:+t.toFixed(2),[id+'_option']:o.k,[id+'_response']:o.n,[id+'_machine']:m.j!=null&&(isBorrow||isHire)?SZ[m.j]:'',[id+'_borrow_from']:isBorrow?CREWS[m.L].tag:'',[id+'_fee']:fee,
+      DL.set({[id+'_day']:+t.toFixed(2),[id+'_option']:o.k,[id+'_response']:o.n,[id+'_machine']:m.j!=null&&(isBorrow||isHire)?SZ[m.j]:'',[id+'_borrow_from']:isBorrow?CREWS[m.L].tag:'',[id+'_to']:m.R!=null&&evAll?CREWS[m.R].tag:'',[id+'_fee']:fee,
         [id+'_decision_sec']:Math.round((now-lg.current.evT)*10)/10,[id+'_conflicts']:after.length,[id+'_conflict_detail']:after.map(c=>CREWS[c.i].tag+' into '+CREWS[c.i-1].tag+' @'+Math.round(c.ft)+'ft d'+c.t.toFixed(1)).join('; ')});
-      DL.inc('conflicts_total',after.length);lg.current={...lg.current,ev:id,fixT:now,extra:extra.slice(),np:pauses.length}}
+      DL.inc('conflicts_total',after.length);lg.current={...lg.current,ev:id,fixT:now,extra:extra.slice(),np:pauses.length,cross:(lg.current.cross||0)+after.length}}
     setCur(null);setSel(null);Snd.ok();
     setPh('fix');setTab('lob')}
   function go(){if(res.conflicts.length)return;
@@ -1729,50 +1853,52 @@ function RiskLevel({evs,extraDays=0,done,lvl}){
       extra.forEach((x,i)=>{const d=x-L.extra[i];if(d){nd++;parts.push('delay '+CREWS[i].tag+' '+(d>0?'+':'')+d+'d')}});
       DL.ev('fix',{event:L.ev,actions:parts.join('; ')||'none'});if(L.ev)DL.set({[L.ev+'_fix']:parts.join('; ')||'none',[L.ev+'_fix_sec']:Math.round((DL.secs()-L.fixT)*10)/10});
       DL.inc('pauses',np);DL.inc('delays',nd);lg.current={...L,extra:extra.slice(),np:pauses.length}}r2log({lvl,ev:'fix',extra:extra.slice(),pauses:pauses.map(p=>({crew:CREWS[p.c].tag,from:+p.a.toFixed(2),days:p.n}))});setPh('run');if(!(nextT!=null&&t>=nextT-1e-6))clk.play(t,nextT!=null?nextT:endT)}
-  function retry(){if(!DL.cur)DL.begin(LVL_ID.indexOf(lvl));DL.set({plan_source:P.own?'own T6 plan':'sample plan',plan_days:P.base.dur,plan_total:P.base.total,budget,deadline:P.deadline});lg.current={evT:0,fixT:0,ev:null,extra:[0,0,0],np:0};clk.stop();clk.set(Math.min(...P.S));setPh('ready');setPicks({});setBorrows({});setFired([]);setCur(null);setSel(null);setM({L:null,j:null});setExtra([0,0,0]);setFeeLog([]);setPauses([])}
+  function retry(){if(!DL.cur)DL.begin(LVL_ID.indexOf(lvl));DL.set({plan_source:P.own?'own T6 plan':'sample plan',plan_days:P.base.dur,plan_total:P.base.total,budget,deadline:P.deadline});lg.current={evT:0,fixT:0,ev:null,extra:[0,0,0],np:0};clk.stop();clk.set(Math.min(...P.S));setPh('ready');setPicks({});setBorrows({});setFired([]);setCur(null);setSel(null);setM({L:null,R:null,j:null});setExtra([0,0,0]);setFeeLog([]);setPauses([])}
   const slide=(i,s)=>{if(!canSlide(i))return;const x=extra.slice();x[i]=Math.max(minStart(i),s)-P.S[i];if(x[i]!==extra[i]){DL.inc('fix_adjustments');DL.ev('adjust',{crew:CREWS[i].tag,kind:'start day',value:P.S[i]+x[i]})}setExtra(x)};
   const dragFor=i=>{if(res.F[i]!=null&&res.F[i]<=t+1e-6)return null;
-    if(res.S[i]>=t-1e-6){const S0=res.S[i];return{min:minStart(i)-S0,max:8,onMove:k=>slide(i,S0+k)}}
-    const n0=pauseNow(i);return{min:-n0,max:6,onMove:k=>setPause(i,Math.max(0,n0+k))}};
+    if(res.S[i]>=t-1e-6){const S0=res.S[i];return{min:minStart(i)-S0,max:maxFix+2,onMove:k=>slide(i,S0+k)}}
+    const n0=pauseNow(i);return{min:-n0,max:maxFix,onMove:k=>setPause(i,Math.max(0,n0+k))}};
   const pauseNow=i=>{const p=pauses.find(z=>z.c===i&&Math.abs(z.a-t)<1e-6);return p?p.n:0};
   const setPause=(i,n)=>{if(n!==pauseNow(i)){DL.inc('fix_adjustments');DL.ev('adjust',{crew:CREWS[i].tag,kind:'pause days',value:n})}const rest=pauses.filter(z=>!(z.c===i&&Math.abs(z.a-t)<1e-6));setPauses(n>0?[...rest,{c:i,a:t,n}]:rest)};
-  const sp=r2site(res,t);
+  const sp=r2site(resD,t);
   const qty=P.sel.map(s=>({Small:s[0],Standard:s[1],Heavy:s[2]}));
-  const site=<Site ft={sp.ft} st={sp.st} qty={qty} clock={'Day '+t.toFixed(1)} alert={ev?{big:ev.ic+' '+ev.name.toUpperCase(),msg:ev.what}:null}
+  const site=<Site len={LEN} ft={sp.ft} st={sp.st} qty={qty} clock={'Day '+t.toFixed(1)} alert={ev?{big:ev.ic+' '+ev.name.toUpperCase(),msg:ev.what}:null}
     player={{t,min:1,max:Math.max(endT,t,P.base.F[2]+2),run:clk.run,disabled:ph!=='ready'&&ph!=='run',spd,setSpd,onPlay:play,onPause:()=>clk.stop(),onScrub:()=>{}}}/>;
   const bands=fired.filter(e=>res.te[e]!=null).map(e=>({a:res.te[e],b:res.te[e]+(picks[e]!=null?r2len(e,picks[e],borrows[e]):R2EV[e].len),label:R2EV[e].ic+' '+R2EV[e].name}));
   const tMax=Math.max(12,Math.ceil(ended?Math.max(...res.E):Math.max(...P.base.E))+2);
-  const clip=tr=>{if(ended||ph==='fix')return tr;const o=tr.filter(z=>z.t<=t+1e-9);if(t>tr[0].t&&t<tr[tr.length-1].t-1e-9){const m=posAt(tr,t);o.push({t,x:m.x,w:m.w})}return o};
+  const clip=tr0=>{const tr=tr0;if(ended||ph==='fix')return tr;const o=tr.filter(z=>z.t<=t+1e-9);if(t>tr[0].t&&t<tr[tr.length-1].t-1e-9){const m=posAt(tr,t);o.push({t,x:m.x,w:m.w})}return o};
   const bars=CREWS.map((c,i)=>{const fin=res.E[i],pe=P.base.E[i]+(res.S[i]-P.S[i]),shown=ended||ph==='fix'||t>=res.F[i]?fin:Math.max(pe,Math.ceil(t-1e-9));return{S:res.S[i],D:shown-res.S[i]}});
   const sofar=r2todate(P,res,t,feeLog).total;
   return(<Split compact noMission site={site}>
     <div className="dock eqslot">
       <div className="bhd"><span>{evs.map((e,k)=><span key={e} className={'chip'+(picks[e]!=null?' ok':e===cur?' y':'')} style={{marginRight:6}}>{fired.includes(e)?R2EV[e].ic+' '+R2EV[e].name+(picks[e]!=null?' · '+R2EV[e].opts[picks[e]].k:''):'❓ Event '+(k+1)}</span>)}</span>
-        <span className="sp"/><span className="chip y">💰 ≤ {money(budget)}</span><span className="chip">⏱ ≤ {P.deadline} days · late $1,000/d<Info k="latefee"/></span></div>
-      {ph==='ready'&&<div className="banner good">🔒 {P.own?'Your Training 6 plan':'Sample plan (finish Training 6 to use your own)'} · {P.base.dur} days · {money(P.base.total)} · {money(budget-P.base.total)} spare<span className="sp"/><button className="go" onClick={play}>▶ Run the job</button></div>}
+        <span className="sp"/><span className="chip y">💰 ≤ {money(budget)}</span><span className="chip">⏱ ≤ {P.deadline} days · late {money(P.ldRate||R2LD)}/d<Info k="latefee"/></span></div>
+      {ph==='ready'&&cfg&&<div className="banner good">🔒 Your crew design · {P.base.dur} days · {money(P.base.total)} planned · {money(budget-P.base.total)} under the cap<span className="sp"/><button className="go" onClick={play}>▶ Run the job</button></div>}
+      {ph==='ready'&&!cfg&&<div className="banner good">🔒 {P.own?'Your Training 6 plan':'Sample plan (finish Training 6 to use your own)'} · {P.base.dur} days · {money(P.base.total)} · {money(budget-P.base.total)} spare<span className="sp"/><button className="go" onClick={play}>▶ Run the job</button></div>}
       {ph==='run'&&<div className="banner amber">🚧 Building… Day {t.toFixed(1)}{!clk.run&&<><span className="sp"/><button className="go" onClick={play}>▶ Resume</button></>}</div>}
       {ph==='event'&&ev&&<>
         <div className="banner bad">⚠ Day {t.toFixed(1)} · {ev.ic} {ev.name}: {ev.what}</div>
         <div className="opts" role="group" aria-label="Responses">{ev.opts.map((o,k)=>(
           (()=>{const avail=o.type!=='borrow'||o.lenders.some(lenderOk);const ls=o.type==='borrow'?o.lenders.filter(lenderOk):[];return(
-          <button key={k} type="button" disabled={!avail} className={'opt r2opt'+(sel===k?' on':'')+(avail?'':' off')} style={{'--tc':CREWS[ev.crew].c}} aria-pressed={sel===k} onClick={()=>{if(!avail)return;if(sel!==k)setM({L:ls.length===1?ls[0]:null,j:null});setSel(k)}}>
-            <div><b>{o.k} · {o.n}</b><small>{avail?o.s:'Not available: '+o.lenders.map(L=>CREWS[L].tag).join(' and ')+' has finished and its machines have left the site'}</small></div></button>)})()))}</div>
+          <button key={k} type="button" disabled={!avail} className={'opt r2opt'+(sel===k?' on':'')+(avail?'':' off')} style={{'--tc':CREWS[ev.crew==='all'?1:ev.crew].c}} aria-pressed={sel===k} onClick={()=>{if(!avail)return;if(sel!==k)setM({L:ls.length===1&&ev.crew!=='all'?ls[0]:null,R:null,j:null});setSel(k)}}>
+            <div><b>{o.k} · {o.n}</b><small>{avail?(o.fee!=null?o.s.replace(/\$[\d,]+/,money(feeOf(o))):o.s):'Not available: '+o.lenders.map(L=>CREWS[L].tag).join(' and ')+' has finished and its machines have left the site'}</small></div></button>)})()))}</div>
         {(isBorrow||isHire)&&<MachinePicker P={P} e={cur} oi={sel} m={m} setM={setM} t={t} res={res} lenderOk={lenderOk}/>}
-        <div className="mrow" style={{marginTop:8}}><span className="unitnote" style={{margin:0}}>{(isBorrow||isHire)&&!qOk?(isBorrow&&m.L==null?'👆 Pick the crew to borrow from':'👆 Pick one machine to '+(isHire?'hire':'borrow')):'🤔 Who pays: days, dollars, or another crew? You’ll see the result as the job runs.'}</span><span className="sp"/>
+        <div className="mrow" style={{marginTop:8}}><span className="unitnote" style={{margin:0}}>{(isBorrow||isHire)&&!qOk?(evAll&&m.R==null?'👆 Pick the crew that gets the machine':isBorrow&&m.L==null?'👆 Pick the crew to borrow from':'👆 Pick one machine to '+(isHire?'hire':'borrow')):'🤔 Who pays: days, dollars, or another crew? You’ll see the result as the job runs.'}</span><span className="sp"/>
           <button className="go" disabled={sel==null||!qOk} onClick={confirm}>Commit ▶</button></div></>}
       {ph==='fix'&&<>
-        {res.conflicts.length?<div className="banner bad">💥 {res.conflicts.map(c=>CREWS[c.i].tag+' runs into '+CREWS[c.i-1].tag+' at '+Math.round(c.ft)+' ft on Day '+c.t.toFixed(1)).join(' · ')}<Info k="conflict"/></div>
+        {res.conflicts.length?<div className="banner bad">💥 {res.conflicts.map(c=>CREWS[c.i].tag+' runs into '+CREWS[c.i-1].tag+' at '+Math.round(c.ft).toLocaleString('en-US')+' ft on Day '+c.t.toFixed(1)).join(' · ')}<Info k="conflict"/>{cfg&&<small style={{display:'block',fontWeight:700}}>↔ Drag a line on the LOB: a crew that is working pauses, a crew that hasn't started starts later.</small>}</div>
           :<div className="banner good">✓ No lines cross. The schedule is safe.<span className="sp"/><button className="go" onClick={go}>Continue ▶</button></div>}
-        <div className="fixbox"><div className="bhd" style={{marginBottom:4}}>🛠 Fix the schedule <small style={{color:'var(--soft)',fontWeight:700}}>· drag a line on the LOB, or use + / − · pause a crew that's working · delay one that hasn't started</small></div>
+        {!cfg&&<div className="fixbox"><div className="bhd" style={{marginBottom:4}}>🛠 Fix the schedule <small style={{color:'var(--soft)',fontWeight:700}}>· drag a line on the LOB, or use + / − · pause a crew that's working · delay one that hasn't started</small></div>
           {CREWS.map((c,i)=>{if(res.F[i]!=null&&res.F[i]<=t+1e-6)return null;const started=res.S[i]<t-1e-6;
             return started
               ?<div key={i} className="fixrow"><span style={{color:c.c,fontWeight:900}}>{c.ic} {c.tag}</span><span className="unitnote" style={{margin:0}}>working · pause from Day {t.toFixed(1)}</span><span className="sp"/>
-                <div className="step"><button aria-label={'Pause '+c.tag+' one day less'} onClick={()=>setPause(i,Math.max(0,pauseNow(i)-1))}>−</button><output>{pauseNow(i)} d</output><button aria-label={'Pause '+c.tag+' one day more'} onClick={()=>setPause(i,Math.min(6,pauseNow(i)+1))}>+</button></div></div>
+                <div className="step"><button aria-label={'Pause '+c.tag+' one day less'} onClick={()=>setPause(i,Math.max(0,pauseNow(i)-1))}>−</button><output>{pauseNow(i)} d</output><button aria-label={'Pause '+c.tag+' one day more'} onClick={()=>setPause(i,Math.min(maxFix,pauseNow(i)+1))}>+</button></div></div>
               :<div key={i} className="fixrow"><span style={{color:c.c,fontWeight:900}}>{c.ic} {c.tag}</span><span className="unitnote" style={{margin:0}}>not started · start day</span><span className="sp"/>
                 <div className="step"><button aria-label={'Start '+c.tag+' one day earlier'} onClick={()=>slide(i,res.S[i]-1)}>−</button><output>Day {res.S[i]}</output><button aria-label={'Start '+c.tag+' one day later'} onClick={()=>slide(i,res.S[i]+1)}>+</button></div></div>})}
           {res.conflicts.length>0&&<div className="mrow" style={{marginTop:6}}><span className="unitnote" style={{margin:0}}>Continue unlocks when no lines cross.</span><span className="sp"/><button className="go" disabled>Continue ▶</button></div>}
-        </div></>}
-      {ended&&<>
+        </div>}</>}
+      {ended&&cfg&&<>{cfg.endView({res,left,ok,crossings:lg.current.cross||0})}<Debrief P={P} res={res} picks={picks} borrows={borrows} budget={budget} pauses={pauses}/></>}
+      {ended&&!cfg&&<>
         {ok?<div className="banner good">✓ Done · Day {Math.max(...res.E)} · {money(res.total)} · {money(left)} under budget <span className="r2stars">{'★'.repeat(r2stars(left))}<span className="off">{'★'.repeat(3-r2stars(left))}</span></span><span className="sp"/><button className="go ghost sm" onClick={retry}>↺ Try another way</button><button className="go" onClick={()=>done(r2stars(left))}>Finish ▶</button></div>
           :<div className="banner bad">✗ Over budget by {money(-left)}<span className="sp"/><button className="go" onClick={retry}>↺ Try again</button></div>}
         <Debrief P={P} res={res} picks={picks} borrows={borrows} budget={budget} pauses={pauses}/></>}
@@ -1785,19 +1911,151 @@ function RiskLevel({evs,extraDays=0,done,lvl}){
       {tab==='bar'&&<div className="board barb"><div className="bhd">📊 Bar chart<Info k="bar"/>{ph==='fix'&&CREWS.some((c,i)=>canSlide(i))&&<span className="chip y">↔ or drag a crew that hasn't started</span>}<span className="sp"/>
         </div>
         <Timeline tMax={tMax} deadline={Math.min(...P.S)+P.deadline} onSlide={(i,s)=>slide(i,s)}
-          rows={CREWS.map((c,i)=>({...c,placed:true,S:bars[i].S,D:bars[i].D,min:P.S[i],fill:posAt(res.tr[i],t).x/PJ*((P.base.E[i]-P.S[i])/Math.max(1,bars[i].D)),locked:!canSlide(i),canSlide:canSlide(i),st:posAt(res.tr[i],t).x>=PJ-1e-6?'✓':''}))}/></div>}
+          rows={CREWS.map((c,i)=>({...c,placed:true,S:bars[i].S,D:bars[i].D,min:P.S[i],fill:posAt(resD.tr[i],t).x/PJ*((P.base.E[i]-P.S[i])/Math.max(1,bars[i].D)),locked:!canSlide(i),canSlide:canSlide(i),st:posAt(resD.tr[i],t).x>=PJ-1e-6?'✓':''}))}/></div>}
       {tab==='lob'&&<div className="board lobb"><div className="bhd">📈 Line of Balance<Info k="lob"/><span className="sp"/><span className="r2key"><i className="k1"/>planned <i className="k2"/>actual {ph==='fix'&&<><i className="k3"/>forecast</>} 💥 conflict</span></div>
-        <Lob tMax={tMax} deadline={Math.min(...P.S)+P.deadline} lines={CREWS.map((c,i)=>({S:P.S[i],D:PJ/P.rate[i],c:c.c,dash:true}))} bands={bands}
-          paths={CREWS.map((c,i)=>({pts:clip(res.tr[i]),c:c.c,drag:ph==='fix'?dragFor(i):null}))} upto={ph==='fix'?t:null} hits={ph==='fix'?res.conflicts:null} cursor={ph==='ready'||ended?null:t}/></div>}
+        <Lob tMax={tMax} deadline={Math.min(...P.S)+P.deadline} lines={CREWS.map((c,i)=>({S:P.S[i],D:LEN/P.rate[i],c:c.c,dash:true}))} bands={bands} ylab={LEN===PJ?null:[[0,'0'],[100,'1'],[200,'2'],[300,'3']]} ftMul={1/K}
+          paths={CREWS.map((c,i)=>({pts:clip(resD.tr[i]),c:c.c,drag:ph==='fix'?dragFor(i):null}))} upto={ph==='fix'?t:null} hits={ph==='fix'?resD.conflicts:null} cursor={ph==='ready'||ended?null:t}/></div>}
     </div>
     {ended?<><FinalSchedule P={P} res={res}/><FinalBudget P={P} res={res} picks={picks} borrows={borrows} budget={budget}/></>:<FinalSchedule P={P} res={res} title={'📋 Revised schedule · Day '+t.toFixed(1)}/>}
   </Split>);
 }
-function R21(p){return <RiskLevel {...p} evs={[0]} lvl="2.1"/>}
-function R22(p){return <RiskLevel {...p} evs={[1]} lvl="2.2"/>}
-function R23(p){return <RiskLevel {...p} evs={[2]} lvl="2.3"/>}
-function R24(p){return <RiskLevel {...p} evs={[0,1,2]} extraDays={1} lvl="2.4"/>}
-const COMPS=[M1,M2,M3,M4,M5,M6,R21,R22,R23,R24];
+/* Stage 2 levels: library events at fixed spots (ft along the line, or a day for site-wide events);
+   allow = budget allowance in all-crew days on top of the plan (calibrated with calib/check2.js) */
+const R2LEVELS={
+ '2.1':{list:[{id:'E1',at:90},{id:'E2',at:240}],allow:.85},
+ '2.2':{list:[{id:'P1',at:60},{id:'P2',at:150},{id:'P3',at:240}],allow:2.4},
+ '2.3':{list:[{id:'B1',at:60}],allow:.45},
+ '2.4':{list:[{id:'E2',at:150},{id:'P2',at:120},{id:'B1',at:150},{id:'A2',day:6}],allow:2.0}};
+function R21(p){return <RiskLevel {...p} {...R2LEVELS['2.1']} lvl="2.1"/>}
+function R22(p){return <RiskLevel {...p} {...R2LEVELS['2.2']} lvl="2.2"/>}
+function R23(p){return <RiskLevel {...p} {...R2LEVELS['2.3']} lvl="2.3"/>}
+function R24(p){return <RiskLevel {...p} {...R2LEVELS['2.4']} lvl="2.4"/>}
+
+/* ===== STAGE 3 · RUN THE JOB (3 miles, random location, library events at the site's odds) =====
+   Same engine as Stage 2 (r2sim). Inputs change only: length, machine table, fees × 10, caps 55 days / $650,000.
+   Calibrated in calib/stage3.js with this code (see the Stage 3 design doc). */
+const S3C={len:15840,capD:55,capC:650000,feeMul:10,mob:2000,ld:10000,
+  EQ:{exc:[[150,950],[220,1525],[330,2700]],pipe:[[110,1400],[180,2400],[290,4500]],back:[[175,1400],[250,2200],[350,3700]]}};
+const S3F=[{k:'soil',n:'Soil cohesion',d:'weak ground that will not stand on its own'},{k:'rock',n:'Bedrock depth',d:'shallow hard rock in the way'},{k:'water',n:'Groundwater table',d:'high water: dewatering, wall failure, settlement'},
+  {k:'rain',n:'Precipitation',d:'rain volume and how long it lasts'},{k:'temp',n:'Temperature extremes',d:'heat or freeze'},{k:'traffic',n:'Traffic congestion',d:'delivery windows, crane set-up, tight space'}];
+const S3SITES={Texas:{r:'VLHVMM',sig:'Soft saturated clay over a shallow water table. No rock at all.'},'New York':{r:'LVLMMV',sig:'Shallow schist and extreme congestion. Stable ground, hostile surface.'},
+  Chicago:{r:'MHMMVH',sig:'Dolomite plus hard freeze. Rock and thermometer decide this level.'},'Los Angeles':{r:'MMLLMV',sig:'Logistics level. Kind ground, brutal traffic, deep water table.'},
+  'Las Vegas':{r:'MVLLVL',sig:'Caliche hardpan and extreme heat. Bone-dry, no water hazards at all.'},Florida:{r:'VMVHLL',sig:'Running sand below the water table. Everything is a dewatering problem.'},
+  'Bangkok, Thailand':{r:'VLVVMV',sig:'Soft marine clay, subsidence, monsoon, congestion. Hardest level.'},'Seoul, South Korea':{r:'MVMVHH',sig:'Granite plus monsoon plus winter freeze. Won on the calendar.'}};
+const S3DRV={E1:['traffic'],E2:['rock'],P1:['soil','water'],P2:['traffic'],P3:['traffic'],B1:['temp','rain'],A1:['water'],A2:['rain','temp']};
+const RATE_N={L:'Low',M:'Med',H:'High',V:'V.High'},RATE_P={L:.10,M:.25,H:.45,V:.65},RORD='LMHV';
+const s3rate=(site,f)=>S3SITES[site].r[S3F.findIndex(x=>x.k===f)];
+const s3evRate=(site,id)=>S3DRV[id].map(f=>s3rate(site,f)).reduce((a,b)=>RORD.indexOf(b)>RORD.indexOf(a)?b:a);
+const mulberry=a=>()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
+function s3draw(site,P,seed){const r=mulberry(seed),out=[];Object.keys(S3DRV).forEach(id=>{if(r()<RATE_P[s3evRate(site,id)]){const x={id};
+  if(LIB[id].crew==='all')x.day=Math.round(Math.min(...P.S)+(0.15+0.7*r())*P.base.dur);else x.at=Math.round(S3C.len*(0.15+0.7*r()));out.push(x)}});return out}
+function s3site(){const keys=Object.keys(S3SITES);let q=null;try{q=new URLSearchParams(location.search).get('site')}catch(e){}
+  if(q){const k=keys.find(x=>x.toLowerCase().startsWith(q.toLowerCase()));if(k)return k}
+  const K='pipelineRush.s3site.'+(DL.pid||'guest');try{const v=localStorage.getItem(K);if(v&&S3SITES[v])return v}catch(e){}
+  const v=keys[Math.floor(Math.random()*keys.length)];try{localStorage.setItem(K,v)}catch(e){}return v}
+/* Stage 3 machine table replaces the Stage 1 table while Stage 3 is on screen */
+function useStage3Equip(){const saved=useRef(null);
+  useState(()=>{saved.current={};for(const k of KEYS){saved.current[k]=EQUIP[k];EQUIP[k]=S3C.EQ[k].map(([r,c],j)=>({n:SZ[j],r,c}))}return 1});
+  useEffect(()=>()=>{for(const k of KEYS)EQUIP[k]=saved.current[k]},[])}
+function s3plan(sel,st){const rate=[0,1,2].map(i=>sumRate(i,sel[i])),cost=[0,1,2].map(i=>sumCost(i,sel[i]));const D=rate.map(r=>r>0?Math.ceil(S3C.len/r):0);
+  const S=[1],ok=rate.every(r=>r>0);const min=[1];
+  for(const i of [1,2]){let s0=S[i-1];if(ok)while(clash({S:S[i-1],D:D[i-1]},{S:s0,D:D[i]})&&s0<200)s0++;min.push(s0);S.push(st[i]==null?s0:st[i])}
+  const dur=ok?Math.max(...S.map((x,i)=>x+D[i]))-1:0,direct=D.reduce((a,d,i)=>a+d*cost[i],0),cost0=loaded(direct).total;
+  const P={sel:sel.map(a=>a.slice()),S,rate,cost,len:S3C.len,deadline:S3C.capD,ldRate:S3C.ld,own:true};
+  if(ok){R2EV=[];P.base=r2sim(P,[],{},{},[0,0,0],[]);P.dayBurn=loaded(cost.reduce((a,c)=>a+c,0)).total}
+  const cross=ok?[1,2].map(i=>{const c=clash({S:S[i-1],D:D[i-1]},{S:S[i],D:D[i]});return c?{...c,i}:null}).filter(Boolean):[];
+  return{P,ok,D,min,dur,planned:cost0,cross,buf:S.map((x,i)=>i?x-min[i]:0)}}
+const S3STARS=sc=>sc>=85?3:sc>=70?2:1;
+function S3L({done}){
+  useStage3Equip();
+  const [site]=useState(s3site);const card=S3SITES[site];
+  const [ph,setPh]=useState('site');const [att,setAtt]=useState(1);const [seed,setSeed]=useState(()=>Math.floor(Math.random()*1e9));
+  const [pick,setPick]=useState(null);const [sel,setSel]=useState([[1,1,0],[0,2,0],[0,1,1]]);const [st,setSt]=useState([1,null,null]);
+  const [list,setList]=useState(null);const t0=useRef(Date.now());const hist=useRef([]);const prev=useRef(null);const seen=useRef({});const lastFail=useRef('');
+  const pl=s3plan(sel,st);const reserve=S3C.capC-pl.planned;
+  const okDays=pl.ok&&pl.dur<=S3C.capD,okCost=pl.ok&&pl.planned<=S3C.capC,valid=okDays&&okCost&&!pl.cross.length;
+  const evIds=Object.keys(S3DRV);
+  const pOf=id=>RATE_P[s3evRate(site,id)];const pMax=Math.max(...evIds.map(pOf));
+  /* tie-break among events at the top chance: more of its hazards at that top rating = more likely to show up */
+  const nTop=id=>S3DRV[id].reduce((a,f)=>a+RATE_P[s3rate(site,f)],0);
+  const at=evIds.filter(id=>pOf(id)===pMax),nMax=Math.max(...at.map(nTop));const top=at.filter(id=>Math.abs(nTop(id)-nMax)<1e-9);
+  const byP=evIds.slice().sort((x,y)=>(top.includes(y)-top.includes(x))||(pOf(y)-pOf(x)));
+  /* crew risk = chance that at least one of its own events (or a site-wide one) hits this run */
+  const crewEv=i=>evIds.filter(id=>LIB[id].crew===i||LIB[id].crew==='all');
+  const crewRisk=CREWS.map((c,i)=>1-crewEv(i).reduce((a,id)=>a*(1-pOf(id)),1));
+  const ownRisk=CREWS.map((c,i)=>1-evIds.filter(id=>LIB[id].crew===i).reduce((a,id)=>a*(1-pOf(id)),1));
+  const hiCrew=ownRisk.indexOf(Math.max(...ownRisk));
+  const pct=x=>Math.round(x*100)+'%';
+  const tM=Math.max(58,(pl.ok?pl.dur:0)+3);
+  /* each crew moves on its own: fix every start where it is now, then move only the dragged one */
+  const moveS=(i,v)=>{if(i<1||!pl.ok||v===pl.P.S[i])return;const x=pl.P.S.slice();x[i]=v;setSt(x);DL.inc('drags_'+CK[i]);
+    const c=clash({S:x[i-1],D:pl.D[i-1]},{S:v,D:pl.D[i]});DL.ev('move',{crew:CREWS[i].tag,start:v,crosses:!!c});if(c)DL.inc('cross_warnings')};
+  const setCount=(c,j,d)=>{const x=sel.map(a=>a.slice());const tot=x[c].reduce((a,b)=>a+b,0);if(d>0&&tot>=3)return;x[c][j]=Math.max(0,x[c][j]+d);setSel(x)};
+  const choose=id=>{if(pick)return;setPick(id);DL.ev('identify',{event:id,correct:top.includes(id),top:top.join(' ')})};
+  function start(){if(!valid)return;const evs=s3draw(site,pl.P,seed);setList(evs);
+    DL.mark('design');
+    /* what changed since the last attempt: the core "did they learn from the failure" measure */
+    const pv=prev.current,mk=i=>sel[i].map((n,j)=>n?n+' '+SZ[j]:'').filter(Boolean).join(' + ');
+    const changes=pv?CREWS.flatMap((c,i)=>{const o=[];if(pv.sel[i].join()!==sel[i].join())o.push(CK[i]+' machines → '+mk(i));if(pv.S[i]!==pl.P.S[i])o.push(CK[i]+' start '+(pl.P.S[i]-pv.S[i]>0?'+':'')+(pl.P.S[i]-pv.S[i])+' d');return o}).join('; ')||'no change':'';
+    prev.current={sel:sel.map(a=>a.slice()),S:pl.P.S.slice()};
+    evs.forEach(e=>{seen.current[e.id]=(seen.current[e.id]||0)+1});
+    DL.set({site,seed,identify_pick:pick||'',identify_correct:pick?(top.includes(pick)?1:0):'',
+      high_risk_crew:CREWS[hiCrew].tag,high_risk_rate:pl.P.rate[hiCrew],high_risk_buffer:pl.buf[hiCrew],
+      buffer_pipe:pl.buf[1],buffer_back:pl.buf[2],planned_days:pl.dur,planned_cost:pl.planned,time_reserve:S3C.capD-pl.dur,cost_reserve:reserve,
+      changes_from_last:changes,prev_failure:lastFail.current,events_drawn:evs.map(e=>e.id).join(' '),
+      events_seen_total:Object.entries(seen.current).map(([k,v])=>k+'×'+v).join(' ')});
+    DL.ev('design',{machines:JSON.stringify(sel),starts:pl.P.S.join(','),buffers:pl.buf.join(','),planned_days:pl.dur,planned_cost:pl.planned});
+    setPh('run')}
+  function revise(){hist.current.push({att,seed});DL.begin(LVL_ID.indexOf('3'));setAtt(a=>a+1);setSeed(Math.floor(Math.random()*1e9));setList(null);setPh('design')}
+  const score=(res,crossings,ok)=>{const mins=(Date.now()-t0.current)/60000;
+    const parts={conflicts:Math.max(0,30-6*crossings),caps:(res.dur<=S3C.capD?15:0)+(res.total<=S3C.capC?15:0),attempts:att===1?25:att===2?18:att===3?12:6,time:Math.max(0,15-Math.max(0,Math.floor((mins-25)/2)))};
+    return{parts,total:parts.conflicts+parts.caps+parts.attempts+parts.time,mins}};
+  const scoreRef=useRef(null);
+  const cfg=pl.ok?{P:pl.P,budget:S3C.capC,feeMul:S3C.feeMul,mob:S3C.mob,maxFix:15,site,
+    onEnd:(res,{ok,crossings})=>{const sc=score(res,crossings,ok);scoreRef.current={...sc,ok,res};
+      lastFail.current=ok?'':(res.dur>S3C.capD&&res.total>S3C.capC?'both':res.dur>S3C.capD?'time':'cost');
+      return{score_conflicts:sc.parts.conflicts,score_caps:sc.parts.caps,score_attempts:sc.parts.attempts,score_time:sc.parts.time,score_total:ok?sc.total:'',crossings,
+        extra_cost:Math.max(0,res.total-pl.planned),days_over:Math.max(0,res.dur-S3C.capD),cost_over:Math.max(0,res.total-S3C.capC),stage_minutes:+sc.mins.toFixed(1),failure:ok?'':(res.dur>S3C.capD&&res.total>S3C.capC?'both':res.dur>S3C.capD?'time':'cost'),stars:ok?S3STARS(sc.total):0}},
+    endView:({res,left,ok,crossings})=>{const sc=scoreRef.current||score(res,crossings,ok);const why=res.dur>S3C.capD&&res.total>S3C.capC?'over both caps':res.dur>S3C.capD?res.dur+' days > 55':'over budget by '+money(-left);
+      return ok?<div className="banner good">🏁 Both caps met · {res.dur} days · {money(res.total)} · score {sc.total} <span className="r2stars">{'★'.repeat(S3STARS(sc.total))}<span className="off">{'★'.repeat(3-S3STARS(sc.total))}</span></span>
+          <small className="s3parts">conflicts {sc.parts.conflicts}/30 · caps {sc.parts.caps}/30 · attempt {att} → {sc.parts.attempts}/25 · time {sc.parts.time}/15</small><span className="sp"/>
+          <button className="go ghost sm" onClick={revise}>↺ Try another design</button><button className="go" onClick={()=>done(S3STARS(sc.total))}>Finish ▶</button></div>
+        :<div className="banner bad">✗ Attempt {att}: {why}<span className="sp"/><button className="go" onClick={revise}>↺ Revise the crew design</button></div>}}:null;
+  const idle=<Site len={S3C.len} ft={[0,0,0]} st={['ready','ready','ready']} qty={sel.map(s=>({Small:s[0],Standard:s[1],Heavy:s[2]}))}/>;
+  if(ph==='run'&&list)return <RiskLevel key={att+'-'+seed} list={list} lvl="3" cfg={cfg} done={done}/>;
+  const hazard=<div className="dock s3card"><div className="bhd">📍 {site} · site review<span className="sp"/><span className="chip">3 miles · ≤ 55 days · ≤ {money(S3C.capC)}</span></div>
+    <div className="unitnote" style={{marginTop:0}}>{card.sig}</div>
+    <div className="s3grid">{S3F.map(f=>{const r=s3rate(site,f.k);return <div key={f.k} className={'s3f r'+r}><b>{f.n}</b><span className="s3r">{RATE_N[r]}</span><small>{f.d}</small></div>})}</div></div>;
+  return(<Split compact noMission site={idle}>
+    <div className="row l"><Pills cur={['site','design'].indexOf(ph)} items={['1 Review the site','2 Design the crews']} can={i=>i===0||!!pick} onPick={i=>{DL.ev('back',{to:i?'design':'site'});if(i===0)DL.inc('site_revisits');if(i===0)DL.mark('design_view');setPh(i?'design':'site')}}/><span className="sp"/>{att>1&&<span className="chip y">Attempt {att} · same site, new events</span>}</div>
+    {ph==='site'&&<>{hazard}
+      <div className="dock"><div className="bhd">🎯 Which event is most likely at {site}? Tap one.<span className="sp"/>{pick&&<span className={'chip '+(top.includes(pick)?'ok':'no')}>{top.includes(pick)?'✓ Right':'✗ Not the top one'}</span>}</div>
+        <div className="s3ev">{(pick?byP:evIds).map(id=>{const E=LIB[id],r=s3evRate(site,id),isTop=top.includes(id);
+          return <button type="button" key={id} disabled={!!pick} onClick={()=>choose(id)} className={'s3e pick'+(pick&&isTop?' top':'')+(pick===id?' on':'')}>
+            <b>{E.ic} {id} · {E.name}{pick&&isTop&&' ⭐ most likely'}</b>
+            <small>{E.crew==='all'?'All crews':CREWS[E.crew].tag} · {E.id==='P1'?'stops until the trench is safe':Math.round(E.f*100)+'% speed for '+E.len+' days'}</small>
+            <small className="muted">Driven by {S3DRV[id].map(f=>S3F.find(x=>x.k===f).n+' ('+RATE_N[s3rate(site,f)]+')').join(' or ')}</small>
+            {pick&&<span className={'s3odds r'+r}>{RATE_N[r]} · {pct(RATE_P[r])} chance per run</span>}</button>})}</div>
+        <div className="unitnote">An event takes the <b>highest</b> rating of the hazards behind it: Low 10% · Med 25% · High 45% · V.High 65%. Tie? The event with <b>more bad hazards</b> behind it is the most likely (e.g. V.High + High beats V.High + Med). Events driven by the same hazards are equally likely.</div></div>
+      <div className="banner good">{pick?<>Most likely here: {top.map(id=>LIB[id].name).join(', ')} ({pct(pMax)}). Fees are 10 × Stage 2 · hire delivery {money(S3C.mob)} · late fee {money(S3C.ld)}/day.</>:'Use the hazard ratings to find the event most likely to hit this site.'}
+        <span className="sp"/><button className="go" disabled={!pick} onClick={()=>{DL.mark('site');setPh('design')}}>Next: design the crews ▶</button></div></>}
+    {ph==='design'&&<><div className="dock eqslot"><div className="bhd">🏗 Design the crews · {site}<span className="sp"/><span className="chip y">≤ 55 days · ≤ {money(S3C.capC)}</span></div>
+      <div className="s3crews">{CREWS.map((c,i)=><div key={c.k} className={'s3crew'+(i===hiCrew?' hi':'')} style={{'--tc':c.c}}><b style={{color:c.c}}>{c.ic} {c.tag}</b>{i===hiCrew&&<span className="s3hi">⚠ High-risk crew</span>}
+
+        {EQUIP[c.k].map((e,j)=><div key={j} className="mrow s3m"><span>{e.n} <small>{e.r} ft/d · {money(e.c)}/d</small></span><span className="sp"/>
+          <div className="step"><button aria-label={'Fewer '+e.n+' '+c.tag} onClick={()=>setCount(i,j,-1)}>−</button><output>{sel[i][j]}</output><button aria-label={'More '+e.n+' '+c.tag} onClick={()=>setCount(i,j,1)}>+</button></div></div>)}
+        {pl.P.rate[i]<=0&&<small className="bad">pick at least one machine</small>}</div>)}</div>
+      <div className={'banner '+(valid?'good':'bad')}>{!pl.ok?'Every crew needs at least one machine':
+        <>{pl.cross.map(c=><span key={c.i} style={{display:'block'}}>💥 {CREWS[c.i].tag} runs into {CREWS[c.i-1].tag} on Day {fmt(+c.t.toFixed(1))}. Drag it later.</span>)}{okDays?'✓':'✗'} {pl.dur} days (cap 55 · {S3C.capD-pl.dur>=0?S3C.capD-pl.dur+(S3C.capD-pl.dur===1?' spare day':' spare days'):'over'}) · {okCost?'✓':'✗'} {money(pl.planned)} (cap {money(S3C.capC)} · {reserve>=0?money(reserve)+' spare for events':'over'})</>}
+        <span className="sp"/><button className="go" disabled={!valid} onClick={start}>▶ Run the job</button></div></div>
+      {pl.ok&&<div className="charts s3charts"><div className="board barb"><div className="bhd">📊 Bar chart<span className="sp"/><span className="chip y">↔ drag Pipe laying or Backfill</span></div>
+        <BarSvg tMax={tM} deadline={1+S3C.capD} rows={CREWS.map((c,i)=>({c:c.c,ic:c.ic,S:pl.P.S[i],D:pl.D[i]}))} drag={{idx:[1,2],lim:[1,2].map(i=>[1,tM-pl.D[i]]),onMove:moveS}} bad={pl.cross.map(c=>c.i)}/></div>
+        <div className="board lobb"><div className="bhd">📈 Line of Balance (planned)<span className="sp"/>{pl.cross.length>0&&<span className="chip no">⚠ CONFLICT</span>}</div>
+        <Lob tMax={tM} deadline={1+S3C.capD} drag={{idx:[1,2],lim:[1,2].map(i=>[1,tM-pl.D[i]]),onMove:moveS}} hits={pl.cross.length?pl.cross:null} ftMul={S3C.len/PJ} lines={CREWS.map((c,i)=>({S:pl.P.S[i],D:pl.D[i],c:c.c,lab:pl.P.rate[i]+' ft/d',labFr:[.8,.5,.25][i]}))} ylab={[[0,'0'],[100,'1'],[200,'2'],[300,'3']]}/></div></div>}
+      {pl.ok&&<Budget title="📋 Planned schedule & budget" done plan={CREWS.map((c,i)=>({S:pl.P.S[i],D:pl.D[i]}))} rows={CREWS.map((c,i)=>({show:true,r:pl.P.rate[i],c:pl.P.cost[i],S:pl.P.S[i],D:pl.D[i]}))}/>}</>}
+  </Split>);
+}
+const COMPS=[M1,M2,M3,M4,M5,M6,R21,R22,R23,R24,S3L];
 
 /* ===== SCREENS ===== */
 function Level({i,onDone}){
@@ -1808,9 +2066,9 @@ function Level({i,onDone}){
   const done=useCallback(st=>{const s2=typeof st==='number'?st:null;if(DL.cur&&DL.cur.i===i)DL.end('complete',{stars:s2!=null?Math.max(1,s2):Math.max(1,3-mRef.current)});onDone(i,mRef.current,s2)},[i,onDone]);
   const S=STEPS[i],C=COMPS[i],hats=3-Math.min(m,2);
   return(<main className="wrap wide level">
-    <div className="lbar"><span className="lname">{S.stage===2?'Stage 2 · '+S.n:'Training '+S.n} · {S.name}</span>{S.stage!==2&&<span className="chip" aria-label={hats+' hard hats'}>{'⛑️'.repeat(hats)}{'·'.repeat(3-hats)}</span>}</div>
+    <div className="lbar"><span className="lname">{S.stage===3?'Stage 3':S.stage===2?'Stage 2 · '+S.n:'Training '+S.n} · {S.name}</span>{S.stage!==2&&S.stage!==3&&<span className="chip" aria-label={hats+' hard hats'}>{'⛑️'.repeat(hats)}{'·'.repeat(3-hats)}</span>}</div>
     <StepCtx.Provider value={S}><C miss={miss} done={done}/></StepCtx.Provider>
-    {intro&&<div className="ov"><div className="panel"><div className="lv">{S.stage===2?'STAGE 2 · EVENT '+S.n:'TRAINING '+S.n}</div><h3>{S.name}</h3>
+    {intro&&<div className="ov"><div className="panel"><div className="lv">{S.stage===3?'STAGE 3 · LOCATION-DRIVEN RISK':S.stage===2?'STAGE 2 · EVENT '+S.n:'TRAINING '+S.n}</div><h3>{S.name}</h3>
       <div className="guide mission" style={{textAlign:'left'}}><h4>🎯 Your mission</h4><p>{S.mission}</p></div>
       <div className="guide learn" style={{textAlign:'left'}}><h4>🎓 What you will learn</h4><p>{S.learn}</p></div>
       <div className="row"><button className="go" autoFocus onClick={()=>{DL.mark('intro');setIntro(false)}}>▶ Play</button></div></div></div>}
@@ -1818,13 +2076,13 @@ function Level({i,onDone}){
 }
 function Result({r,onNext,onMap,onReplay}){
   const S=STEPS[r.i];
-  return(<div className="ov"><div className="panel"><div className="lv">{S.stage===2?'EVENT '+S.n+' CLEAR':'TRAINING '+S.n+' CLEAR'}</div><h3>{S.name}</h3>
+  return(<div className="ov"><div className="panel"><div className="lv">{S.stage===3?'STAGE 3 CLEAR':S.stage===2?'EVENT '+S.n+' CLEAR':'TRAINING '+S.n+' CLEAR'}</div><h3>{S.name}</h3>
     <div className="bigstars">{[0,1,2].map(j=><span key={j} className={j<r.stars?'':'off'}>★</span>)}</div>
     <div className="guide why" style={{textAlign:'left'}}><h4>✅ What you learned</h4><p><b>{S.ins}</b></p><p>{S.learned}</p></div>
     <div className="row"><button className="go ghost" onClick={onReplay}>↺ Replay</button><button className="go ghost" onClick={onMap}>🗺 Map</button><button className="go" onClick={onNext}>{r.i<NM-1?'Next ▶':'🏁 Done'}</button></div>
   </div></div>);
 }
-const MAPSTAGES=[{tag:'Stage 1',ttl:'Plan the work',ids:[0,1,2,3,4,5]},{tag:'Stage 2',ttl:'When the site bites',ids:[6,7,8,9]}];
+const MAPSTAGES=[{tag:'Stage 1',ttl:'Plan the work',ids:[0,1,2,3,4,5]},{tag:'Stage 2',ttl:'When the site bites',ids:[6,7,8,9]},{tag:'Stage 3',ttl:'Run the job',ids:[10]}];
 function MapScreen({prog,onPlay}){
   let u=0;while(u<NM&&prog.stars[u]>0)u++;
   return(<main className="wrap">{MAPSTAGES.map(G=><div key={G.tag} className="stage" style={{marginBottom:16}}><h2><span className="tag">{G.tag}</span>{G.ttl}</h2>
@@ -1840,11 +2098,19 @@ function Help({onClose}){return(<div className="ov"><div className="panel"><h3>H
   <div className="tip">Curious? Tap <span className="info static">i</span> next to any term to learn what it means and why it matters.</div>
   <div className="row"><button className="go" onClick={onClose}>Got it</button></div></div></div>)}
 
-function PidAsk({cur,onSave,onCancel}){const [v,setV]=useState(cur||'');const ok=v.trim().length>=2;
-  return(<div className="ov"><form className="panel" onSubmit={e=>{e.preventDefault();if(ok)onSave(v.trim())}}><h3>👤 Participant code</h3>
-    <p style={{textAlign:'left'}}>Type the code you were given (your SGID). It keeps your answers anonymous.</p>
-    <input className="pidin" autoFocus value={v} onChange={e=>setV(e.target.value)} placeholder="e.g. SG024" aria-label="Participant code" maxLength={32}/>
-    {cur&&v.trim()&&v.trim()!==cur&&<div className="tip">⚠ A new code starts the game from the beginning on this device.</div>}
+/* Player ID = FAVORITE COLOR in capitals + "_" + last 4 digits of their phone, e.g. RED_1234 (same as the IGLC game) */
+function PidAsk({cur,onSave,onCancel}){const m=/^([A-Z]+)_(\d{4})$/.exec(cur||'');
+  const [color,setColor]=useState(m?m[1]:''),[digits,setDigits]=useState(m?m[2]:'');
+  const ok=color.length>=2&&/^\d{4}$/.test(digits),id=ok?color+'_'+digits:'';
+  return(<div className="ov"><form className="panel" onSubmit={e=>{e.preventDefault();if(ok)onSave(id)}}><h3>👤 Your player ID</h3>
+    <div className="pidgrid">
+      <label>What's your favorite color?<input className="pidin" autoFocus value={color} placeholder="RED" autoComplete="off" aria-label="Favorite color"
+        onChange={e=>setColor(e.target.value.toUpperCase().replace(/[^A-Z]/g,'').slice(0,15))}/></label>
+      <label>Last 4 digits of your cellphone number<input className="pidin" value={digits} placeholder="1234" inputMode="numeric" autoComplete="off" aria-label="Last 4 digits"
+        onChange={e=>setDigits(e.target.value.replace(/\D/g,'').slice(0,4))}/></label></div>
+    <div className="pidout">Your player ID: <b>{ok?id:(color||'COLOR')+'_'+digits.padEnd(4,'•')}</b></div>
+    <div className="unitnote" style={{marginTop:2}}>Use the same answers every time. Your results are saved for the study under this ID.</div>
+    {cur&&ok&&id!==cur&&<div className="tip">⚠ A new ID starts the game from the beginning on this device.</div>}
     <div className="row">{onCancel&&<button type="button" className="go ghost" onClick={onCancel}>Cancel</button>}<button className="go" disabled={!ok}>Start ▶</button></div></form></div>)}
 function App({init}){
   const [prog,setProg]=useState(()=>init.prog||loadProg()||fresh());
